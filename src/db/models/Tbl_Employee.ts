@@ -2,6 +2,7 @@ import { DataTypes, Model, Optional } from "sequelize";
 import Project from "./Tbl_Project";
 import Role from "./Tbl_Role";
 import sequelizeConnection from "../config";
+import ProjectEmployee from "./Tbl_ProjectEmployee";
 
 
 interface EmployeeAttributes {

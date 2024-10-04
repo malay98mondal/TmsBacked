@@ -29,6 +29,8 @@ async function init() {
     await addProject(); // Call the function to add data to the Tbl_Project table
     // Insert demo data after syncing
     await addRole(); // Call the function to add data to the Tbl_Project table
+
+    
  
   }
 const dbInit = () => {

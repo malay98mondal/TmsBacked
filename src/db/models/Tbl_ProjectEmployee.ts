@@ -4,6 +4,7 @@ import sequelizeConnection from "../config";
 import Employee from "./Tbl_Employee";
 
 
+
 interface ProjectEmployeeAttributes {
   ProjectMember_Id: number;
   Project_Id: number;
@@ -21,6 +22,7 @@ class ProjectEmployee extends Model<ProjectEmployeeAttributes, ProjectEmployeeIn
   public Project_Id!: number;
   public Emp_Id!: number;
   public Is_deleted!: boolean;
+    Employee: any;
 }
 
 ProjectEmployee.init(
@@ -55,5 +57,7 @@ ProjectEmployee.init(
     timestamps: true,
   }
 );
-
+// Define associations after the model is initialized
+ProjectEmployee.belongsTo(Employee, { foreignKey: "Emp_Id" });
+ProjectEmployee.belongsTo(Project, { foreignKey: "Project_Id" });
 export default ProjectEmployee;
