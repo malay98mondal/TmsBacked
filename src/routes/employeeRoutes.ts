@@ -1,5 +1,6 @@
 import express, { Request, Response } from 'express';
 import Employee from '../db/models/Tbl_Employee';
+import Role from '../db/models/Tbl_Role';
 
 const employeeRoutes = express.Router();
 
@@ -120,5 +121,6 @@ employeeRoutes.post('/by-role/:roleId', async (req: any, res: any) => {
         });
     }
 });
-
+// Set up the association
+Employee.belongsTo(Role, { foreignKey: 'Role_Id', as: 'Role' }); // Ensure to use an alias if needed
 export default employeeRoutes;
