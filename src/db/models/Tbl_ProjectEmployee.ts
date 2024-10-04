@@ -9,6 +9,7 @@ interface ProjectEmployeeAttributes {
   ProjectMember_Id: number;
   Project_Id: number;
   Emp_Id: number;
+  Role_Id:number;
   Is_deleted: boolean;
   createdAt?: Date;
   updatedAt?: Date;
@@ -21,8 +22,10 @@ class ProjectEmployee extends Model<ProjectEmployeeAttributes, ProjectEmployeeIn
   public ProjectMember_Id!: number;
   public Project_Id!: number;
   public Emp_Id!: number;
+  public Role_Id!:number;
   public Is_deleted!: boolean;
     Employee: any;
+    Project: any;
 }
 
 ProjectEmployee.init(
@@ -45,6 +48,10 @@ ProjectEmployee.init(
         model: Employee,
         key: "Emp_Id",
       },
+    },
+    Role_Id: {
+      type: DataTypes.INTEGER.UNSIGNED,
+      
     },
     Is_deleted: {
       type: DataTypes.BOOLEAN,

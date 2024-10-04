@@ -2,42 +2,81 @@ import express, { Request, Response } from 'express';
 import ProjectEmployee from '../db/models/Tbl_ProjectEmployee';
 import Employee from '../db/models/Tbl_Employee';
 import Role from '../db/models/Tbl_Role';
+import Project from '../db/models/Tbl_Project';
 
 
 const projectEmployeeRoutes = express.Router();
 
-// 1. Create a new project employee by Project_Id
-projectEmployeeRoutes.post('/:projectId', async (req: Request, res: Response) => {
+projectEmployeeRoutes.post('/:projectId', async (req: any, res: any) => {
     const projectIdString = req.params.projectId; // Get Project_Id from URL parameters
-    const { Emp_Id } = req.body; // Get Emp_Id from request body
+    const { Emp_Id, Role_Id } = req.body; // Get Emp_Id and Role_Id from request body
 
     try {
         // Validate input data
-        if (!Emp_Id) {
+        if (!Emp_Id || !Role_Id) {
             return res.status(400).json({
                 success: false,
-                message: 'Emp_Id is required.',
+                message: 'Both Emp_Id and Role_Id are required.',
             });
         }
 
         // Convert Project_Id to a number
         const projectIdNumber = Number(projectIdString);
 
-        // Create the new ProjectEmployee record
-        const newProjectEmployee = await ProjectEmployee.create({
-            Project_Id: projectIdNumber,
-            Emp_Id, // Emp_Id from request body
-            Is_deleted: false, // Default value
+        // Check if the employee exists
+        const employee = await Employee.findByPk(Emp_Id);
+        if (!employee) {
+            return res.status(404).json({
+                success: false,
+                message: 'Employee not found.',
+            });
+        }
+
+        // Update Role_Id of the employee in the Employee table
+        await Employee.update(
+            { Role_Id }, // Set new Role_Id from request body
+            { where: { Emp_Id } } // Find employee by Emp_Id
+        );
+
+        // Check if the ProjectEmployee record already exists
+        const existingProjectEmployee = await ProjectEmployee.findOne({
+            where: {
+                Project_Id: projectIdNumber,
+                Emp_Id: Emp_Id,
+            },
         });
 
-        return res.status(201).json({
-            success: true,
-            data: newProjectEmployee,
-        });
+        if (existingProjectEmployee) {
+            // If the ProjectEmployee exists, update it
+            await ProjectEmployee.update(
+                { Role_Id }, // Update Role_Id
+                { where: { ProjectMember_Id: existingProjectEmployee.ProjectMember_Id } } // Use the existing ProjectEmployee ID
+            );
+
+            return res.status(200).json({
+                success: true,
+                message: 'Project employee role updated successfully.',
+                data: existingProjectEmployee,
+            });
+        } else {
+            // If the ProjectEmployee does not exist, create a new record
+            const newProjectEmployee = await ProjectEmployee.create({
+                Project_Id: projectIdNumber,
+                Emp_Id, // Use Emp_Id from request body
+                Role_Id, // Use Role_Id from request body
+                Is_deleted: false, // Default value
+            });
+
+            return res.status(201).json({
+                success: true,
+                message: 'Project employee created and role updated successfully.',
+                data: newProjectEmployee,
+            });
+        }
     } catch (error: any) {
         return res.status(500).json({
             success: false,
-            message: 'Failed to create the project employee',
+            message: 'Failed to create or update the project employee',
             error: error.message,
         });
     }
@@ -46,8 +85,8 @@ projectEmployeeRoutes.post('/:projectId', async (req: Request, res: Response) =>
 
 // Get API
 
-// Get all project employees by Project_Id, including Employee_name
-projectEmployeeRoutes.get('/:projectId', async (req:any, res: any) => {
+// // Get all project employees by Project_Id, including Employee_name
+projectEmployeeRoutes.get('/:projectId', async (req: any, res: any) => {
     const projectIdString = req.params.projectId; // Get Project_Id from URL parameters
 
     try {
@@ -63,18 +102,20 @@ projectEmployeeRoutes.get('/:projectId', async (req:any, res: any) => {
             include: [
                 {
                     model: Employee, // Include the Employee model
-                    attributes: ['Employee_name','Role_Id'], // Fetch only the Employee_name
+                    attributes: ['Employee_name', 'Role_Id'], // Fetch Employee_name and Role_Id
 
                     include: [
                         {
                             model: Role, // Include the Role model
-                            attributes: ['Name'], // Fetch only the Role_name
+                            attributes: ['Name'], // Fetch the Role name
                             as: 'Role', // Use the alias here if defined
                         },
                     ],
                 },
-
-
+                {
+                    model: Project, // Include the Project model to fetch the project name
+                    attributes: ['Project_Name'], // Fetch only the Project_Name
+                },
             ],
         });
 
@@ -85,14 +126,15 @@ projectEmployeeRoutes.get('/:projectId', async (req:any, res: any) => {
             });
         }
 
-        // Map the response to include Employee_name
+        // Map the response to include Employee_name and Project_Name
         const response = projectEmployees.map((projectEmployee) => ({
             ProjectMember_Id: projectEmployee.ProjectMember_Id,
             Project_Id: projectEmployee.Project_Id,
             Emp_Id: projectEmployee.Emp_Id,
-            Employee_name: projectEmployee.Employee?.Employee_name, // Assuming you've set up associations
-           // Role_Id: projectEmployee.Employee?.Role_Id, // Assuming you've set up associations
-            Name: projectEmployee.Employee?.Role?.Name, // Fetch Role_name from the Role model
+            Employee_name: projectEmployee.Employee?.Employee_name, // Employee name
+            Role_Id: projectEmployee.Employee?.Role_Id, // Role ID
+            Role_Name: projectEmployee.Employee?.Role?.Name, // Role name from Role model
+            Project_Name: projectEmployee.Project?.Project_Name, // Project name from Project model
             Is_deleted: projectEmployee.Is_deleted,
         }));
 
@@ -108,6 +150,5 @@ projectEmployeeRoutes.get('/:projectId', async (req:any, res: any) => {
         });
     }
 });
-
 
 export default projectEmployeeRoutes;
