@@ -6,7 +6,7 @@ import sequelizeConnection from "../config";
 
 interface EmployeeAttributes {
   Emp_Id: number;
-  Project_Id: number;
+//  Project_Id: number;
   Employee_name: string;
   Role_Id: number;
   Is_deleted: boolean;
@@ -19,7 +19,7 @@ export interface EmployeeOutput extends Required<EmployeeAttributes> {}
 
 class Employee extends Model<EmployeeAttributes, EmployeeInput> implements EmployeeAttributes {
   public Emp_Id!: number;
-  public Project_Id!: number;
+  //public Project_Id!: number;
   public Employee_name!: string;
   public Role_Id!: number;
   public Is_deleted!: boolean;
@@ -32,13 +32,13 @@ Employee.init(
       autoIncrement: true,
       primaryKey: true,
     },
-    Project_Id: {
-      type: DataTypes.INTEGER.UNSIGNED,
-      references: {
-        model: Project,
-        key: "Project_Id",
-      },
-    },
+    // Project_Id: {
+    //   type: DataTypes.INTEGER.UNSIGNED,
+    //   references: {
+    //     model: Project,
+    //     key: "Project_Id",
+    //   },
+  //  },
     Employee_name: {
       type: DataTypes.STRING(255),
     },
