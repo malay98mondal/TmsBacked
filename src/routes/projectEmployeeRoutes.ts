@@ -7,6 +7,83 @@ import Project from '../db/models/Tbl_Project';
 
 const projectEmployeeRoutes = express.Router();
 
+// projectEmployeeRoutes.post('/:projectId', async (req: any, res: any) => {
+//     const projectIdString = req.params.projectId; // Get Project_Id from URL parameters
+//     const { Emp_Id, Role_Id } = req.body; // Get Emp_Id and Role_Id from request body
+
+//     try {
+//         // Validate input data
+//         if (!Emp_Id || !Role_Id) {
+//             return res.status(400).json({
+//                 success: false,
+//                 message: 'Both Emp_Id and Role_Id are required.',
+//             });
+//         }
+
+//         // Convert Project_Id to a number
+//         const projectIdNumber = Number(projectIdString);
+
+//         // Check if the employee exists
+//         const employee = await Employee.findByPk(Emp_Id);
+//         if (!employee) {
+//             return res.status(404).json({
+//                 success: false,
+//                 message: 'Employee not found.',
+//             });
+//         }
+
+//         // Update Role_Id of the employee in the Employee table
+//         await Employee.update(
+//             { Role_Id }, // Set new Role_Id from request body
+//             { where: { Emp_Id } } // Find employee by Emp_Id
+//         );
+
+//         // Check if the ProjectEmployee record already exists
+//         const existingProjectEmployee = await ProjectEmployee.findOne({
+//             where: {
+//                 Project_Id: projectIdNumber,
+//                 Emp_Id: Emp_Id,
+//             },
+//         });
+
+//         if (existingProjectEmployee) {
+//             // If the ProjectEmployee exists, update it
+//             await ProjectEmployee.update(
+//                 { Role_Id }, // Update Role_Id
+//                 { where: { ProjectMember_Id: existingProjectEmployee.ProjectMember_Id } } // Use the existing ProjectEmployee ID
+//             );
+
+//             return res.status(200).json({
+//                 success: true,
+//                 message: 'Project employee role updated successfully.',
+//                 data: existingProjectEmployee,
+//             });
+//         } else {
+//             // If the ProjectEmployee does not exist, create a new record
+//             const newProjectEmployee = await ProjectEmployee.create({
+//                 Project_Id: projectIdNumber,
+//                 Emp_Id, // Use Emp_Id from request body
+//                 Role_Id, // Use Role_Id from request body
+//                 Is_deleted: false, // Default value
+//             });
+
+//             return res.status(201).json({
+//                 success: true,
+//                 message: 'Project employee created and role updated successfully.',
+//                 data: newProjectEmployee,
+//             });
+//         }
+//     } catch (error: any) {
+//         return res.status(500).json({
+//             success: false,
+//             message: 'Failed to create or update the project employee',
+//             error: error.message,
+//         });
+//     }
+// });
+
+
+
 projectEmployeeRoutes.post('/:projectId', async (req: any, res: any) => {
     const projectIdString = req.params.projectId; // Get Project_Id from URL parameters
     const { Emp_Id, Role_Id } = req.body; // Get Emp_Id and Role_Id from request body
@@ -31,13 +108,7 @@ projectEmployeeRoutes.post('/:projectId', async (req: any, res: any) => {
                 message: 'Employee not found.',
             });
         }
-
-        // Update Role_Id of the employee in the Employee table
-        await Employee.update(
-            { Role_Id }, // Set new Role_Id from request body
-            { where: { Emp_Id } } // Find employee by Emp_Id
-        );
-
+     
         // Check if the ProjectEmployee record already exists
         const existingProjectEmployee = await ProjectEmployee.findOne({
             where: {
@@ -47,16 +118,10 @@ projectEmployeeRoutes.post('/:projectId', async (req: any, res: any) => {
         });
 
         if (existingProjectEmployee) {
-            // If the ProjectEmployee exists, update it
-            await ProjectEmployee.update(
-                { Role_Id }, // Update Role_Id
-                { where: { ProjectMember_Id: existingProjectEmployee.ProjectMember_Id } } // Use the existing ProjectEmployee ID
-            );
-
-            return res.status(200).json({
-                success: true,
-                message: 'Project employee role updated successfully.',
-                data: existingProjectEmployee,
+            // If the ProjectEmployee exists, return an error
+            return res.status(409).json({
+                success: false,
+                message: 'Employee is already assigned to this project.',
             });
         } else {
             // If the ProjectEmployee does not exist, create a new record
@@ -67,20 +132,28 @@ projectEmployeeRoutes.post('/:projectId', async (req: any, res: any) => {
                 Is_deleted: false, // Default value
             });
 
+
+            await Employee.update(
+                { Role_Id }, // Set new Role_Id from request body
+                { where: { Emp_Id } } // Find employee by Emp_Id
+            );
+    
+
             return res.status(201).json({
                 success: true,
-                message: 'Project employee created and role updated successfully.',
+                message: 'Project employee created successfully.',
                 data: newProjectEmployee,
             });
         }
     } catch (error: any) {
         return res.status(500).json({
             success: false,
-            message: 'Failed to create or update the project employee',
+            message: 'Failed to create the project employee',
             error: error.message,
         });
     }
 });
+
 
 
 // Get API
