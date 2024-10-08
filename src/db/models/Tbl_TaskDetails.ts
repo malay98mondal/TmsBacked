@@ -8,11 +8,11 @@ import sequelizeConnection from "../config";
 interface TaskDetailsAttributes {
   Task_details_Id: number;
   Emp_Id: number;
-  Task_Id: number;
+  Project_Id:number;
   Status: string;
   Start_Date: Date;
+  Task_Details:string;
   Start_Time: string;
-  AmPm: string;
   End_Date?: Date;
   End_Time?: string;
   Extend_Start_Date?: Date;
@@ -35,11 +35,11 @@ export interface TaskDetailsOutput extends Required<TaskDetailsAttributes> {}
 class TaskDetails extends Model<TaskDetailsAttributes, TaskDetailsInput> implements TaskDetailsAttributes {
   public Task_details_Id!: number;
   public Emp_Id!: number;
-  public Task_Id!: number;
+  public Project_Id:number;
   public Status!: string;
   public Start_Date!: Date;
   public Start_Time!: string;
-  public AmPm!: string;
+  public Task_Details: string;
   public End_Date?: Date;
   public End_Time?: string;
   public Extend_Start_Date?: Date;
@@ -68,12 +68,9 @@ TaskDetails.init(
         key: "Emp_Id",
       },
     },
-    Task_Id: {
-      type: DataTypes.INTEGER.UNSIGNED,
-      references: {
-        model: Task,
-        key: "Task_Id",
-      },
+    
+    Project_Id:{
+      type:DataTypes.INTEGER.UNSIGNED,
     },
     Status: {
       type: DataTypes.STRING(50),
@@ -87,9 +84,8 @@ TaskDetails.init(
       type: DataTypes.STRING(50),
       allowNull: false,
     },
-    AmPm: {
-      type: DataTypes.STRING(2),
-      allowNull: false,
+    Task_Details:{
+      type:DataTypes.STRING(70),
     },
     End_Date: {
       type: DataTypes.DATE,
