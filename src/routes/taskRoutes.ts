@@ -4,8 +4,14 @@ import Project from '../db/models/Tbl_Project';
 import TaskDetails, { TaskDetailsInput } from '../db/models/Tbl_TaskDetails';
 import { Op } from 'sequelize';
 import Employee from '../db/models/Tbl_Employee';
+import multer from 'multer';
+import xlsx from 'xlsx';
 
 const Task = Router();
+
+// Multer configuration for file upload
+const storage = multer.memoryStorage(); // Store files in memory
+const upload = multer({ storage });
 
 // API to get tasks by employee ID
 Task.get('/tasks/:empId', async (req: Request, res: Response) => {
@@ -122,5 +128,70 @@ Task.post('/CreateTask', async (req:any, res:any) => {
     }
   });
   
+
+  /**
+ * POST /importTasks
+ * Import tasks from an Excel file.
+ * The file is uploaded and parsed, and tasks are inserted into the database.
+ */
+Task.post('/importTasks', upload.single('file'), async (req: any, res: Response) => {
+  try {
+    // Check if a file is uploaded
+    if (!req.file) {
+      return res.status(400).json({ message: 'No file uploaded' });
+    }
+
+    // Parse the uploaded Excel file
+    const workbook = xlsx.read(req.file.buffer, { type: 'buffer' });
+    const sheetName = workbook.SheetNames[0]; // Get the first sheet
+    const sheet = workbook.Sheets[sheetName];
+    const data = xlsx.utils.sheet_to_json(sheet); // Convert the sheet to JSON format
+
+    // Iterate over each row in the Excel sheet and create tasks
+    const tasks = await Promise.all(data.map(async (row: any) => {
+      const {
+        Emp_Id,
+        Project_Id,
+        Start_Time,
+        Task_Details,
+        End_Date,
+        End_Time,
+        Role_Id,
+        Assigned_Emp_Id,
+      } = row;
+
+      return TaskDetails.create({
+        Emp_Id,
+        Project_Id,
+        Status: 'In Progress',
+        Start_Date: new Date(),
+        Start_Time,
+        Task_Details,
+        End_Date,
+        End_Time,
+        Role_Id,
+        Assigned_Emp_Id,
+        Is_deleted: false,
+      });
+    }));
+
+    return res.status(201).json({
+      message: 'Tasks imported successfully',
+      tasks,
+    });
+  } catch (error: any) {
+    console.error(error);
+    return res.status(500).json({
+      message: 'Error importing tasks',
+      error: error.message,
+    });
+  }
+});
+
+  
   
 export default Task;
+
+
+
+
