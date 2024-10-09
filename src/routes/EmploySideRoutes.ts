@@ -37,44 +37,48 @@ EmploySideRoute.get("/assigned/:Assigned_Emp_Id", async (req: Request, res: Resp
 
   EmploySideRoute.put('/UpdateTask/:Task_details_Id', async (req, res) => {
     try {
-        const { Task_details_Id } = req.params; // Get the Task_details_Id from the URL parameter
-        const {
-            Status,
-            Extend_Start_Date,
-            Extend_Start_Time,
-            Extend_End_Date,
-            Extend_End_Time,
-            Remarks
-        } = req.body; // Extract data from request body
+        const { Task_details_Id } = req.params;
+        const { Status, Remarks } = req.body;
 
         // Find the task by Task_details_Id
         const task = await TaskDetails.findOne({
             where: { Task_details_Id, Is_deleted: false } // Ensure that the task is not soft-deleted
         });
 
-        // If the task does not exist, return a 404 error
         if (!task) {
             return res.status(404).json({
                 message: 'Task not found'
             });
         }
 
-        // Update the task with the new values
-        const updatedTask = await task.update({
-            Status,
-            Extend_Start_Date,
-            Extend_Start_Time,
-            Extend_End_Date,
-            Extend_End_Time,
-            Remarks
-        });
+        // Prepare update payload
+        let updatePayload: any = { Status };
+
+        // Check if Status is 'Completed' and Remarks is not empty
+        if (Status === 'Completed' && Remarks) {
+            // Get current date and time
+            const currentDate = new Date();
+            const currentTimeString = currentDate.toTimeString().split(' ')[0].slice(0, 5); // Format as HH:mm
+
+            // Add Extend_End_Date and Extend_End_Time to update payload
+            updatePayload.Extend_End_Date = currentDate; // Set the current date
+            updatePayload.Extend_End_Time = currentTimeString; // Set the current time
+        }
+
+        // Always update Remarks if provided
+        if (Remarks) {
+            updatePayload.Remarks = Remarks;
+        }
+
+        // Update the task
+        const updatedTask = await task.update(updatePayload);
 
         return res.status(200).json({
             message: 'Task updated successfully',
             task: updatedTask
         });
+        
     } catch (error) {
-        // Assert the error type and handle unknown errors safely
         const errorMessage = (error as Error).message || 'Error updating task';
         console.error(error);
         return res.status(500).json({
@@ -82,4 +86,6 @@ EmploySideRoute.get("/assigned/:Assigned_Emp_Id", async (req: Request, res: Resp
         });
     }
 });
+
+
 export default EmploySideRoute
