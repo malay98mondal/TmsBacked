@@ -14,44 +14,77 @@ const Task = Router();
 const storage = multer.memoryStorage(); // Store files in memory
 const upload = multer({ storage });
 
-// API to get tasks by employee ID
 Task.get('/tasks/:empId', async (req: Request, res: Response) => {
-    const empId = parseInt(req.params.empId);
-  
-    try {
-      // Find projects associated with the employee
-      const projects = await ProjectEmployee.findAll({
-        where: { Emp_Id: empId, Is_deleted: false },
-        include: [{ model: Project }],
-      });
-  
-      if (projects.length === 0) {
-        return res.status(404).json({ message: 'No projects found for this employee.' });
-      }
-  
-      // Extract project ID and name (assuming the employee can be associated with only one project)
-      const projectId = projects[0].Project_Id; // Get the first project ID
-      const projectName = projects[0].Project?.Project_Name; // Get the first project name
-  
-      // Find tasks associated with the project
-      const tasks = await TaskDetails.findAll({
-        where: {
-          Project_Id: projectId,
-          Is_deleted: false,
-        },
-      });
-  
-      // Return project name and tasks in the response
-      return res.status(200).json({
-        projectId:projectId,
-        ProjectName: projectName,
-        Tasks: tasks,
-      });
-    } catch (error) {
-      console.error(error);
-      return res.status(500).json({ message: 'An error occurred while fetching tasks.' });
+  const empId = parseInt(req.params.empId);
+
+  const { search = '', page = 1, limit = 5 } = req.query; // Get search query, page, and limit from request query
+  const offset = (parseInt(page as string) - 1) * parseInt(limit as string);
+
+  try {
+    // Find projects associated with the employee
+    const projects = await ProjectEmployee.findAll({
+      where: { Emp_Id: empId, Is_deleted: false },
+      include: [{ model: Project }],
+    });
+
+    if (projects.length === 0) {
+      return res.status(404).json({ message: 'No projects found for this employee.' });
     }
-  });
+
+    const projectId = projects[0].Project_Id;
+    const projectName = projects[0].Project?.Project_Name;
+
+    // Find tasks associated with the project, applying search and pagination
+    const tasks = await TaskDetails.findAndCountAll({
+      where: {
+        Project_Id: projectId,
+        Is_deleted: false,
+        [Op.or]: [
+          {
+            Task_Details: {
+              [Op.iLike]: `%${search}%`, // Case-insensitive search in Task_Details
+            },
+          },
+          {
+            '$Employee.Employee_name$': {
+              [Op.iLike]: `%${search}%`, // Case-insensitive search in Employee_name
+            },
+          },
+        ],
+      },
+      offset, // Apply pagination offset
+      limit: parseInt(limit as string), // Apply pagination limit
+      include: [
+        {
+          model: Employee, // Include the Employee model
+          attributes: ['Emp_Id', 'Employee_name'], // Specify attributes you want from Employee
+        },
+      ],
+    });
+
+    // Map through tasks to include employee id and name in each task
+    const tasksWithEmployeeInfo = tasks.rows.map((task) => ({
+      ...task.toJSON(),
+      employeeId: task.Employee?.Emp_Id, // Get employee ID from the included Employee model
+      employeeName: task.Employee?.Employee_name, // Get employee name from the included Employee model
+    }));
+
+    // Return paginated data with total count for frontend pagination
+    return res.status(200).json({
+      projectId,
+      projectName,
+      tasks: tasksWithEmployeeInfo,
+      total: tasks.count, // Total number of matching tasks
+      page: parseInt(page as string),
+      limit: parseInt(limit as string),
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: 'An error occurred while fetching tasks.' });
+  }
+});
+
+
 
 Task.post('/CreateTask', async (req:any, res:any) => {
     try {

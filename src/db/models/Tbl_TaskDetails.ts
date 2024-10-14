@@ -52,6 +52,7 @@ class TaskDetails extends Model<TaskDetailsAttributes, TaskDetailsInput> impleme
   public Role_Id!: number;
   public Assigned_Emp_Id!: number;
   public Is_deleted!: boolean;
+  Employee: any;
 }
 
 TaskDetails.init(
@@ -136,6 +137,7 @@ TaskDetails.init(
   }
 );
 
+TaskDetails.belongsTo(Employee, { foreignKey: 'Assigned_Emp_Id' });
 
 
 

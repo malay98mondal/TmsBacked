@@ -9,28 +9,115 @@ const EmploySideRoute = Router();
 
 
 EmploySideRoute.get("/assigned/:Assigned_Emp_Id", async (req: Request, res: Response) => {
-    const { Assigned_Emp_Id } = req.params;
-  
-    try {
-      // Query the database to find all tasks assigned to the employee and include project name
-      const taskDetails = await TaskDetails.findAll({
-        where: {
-          Assigned_Emp_Id: Assigned_Emp_Id,  // Filter by Assigned_Emp_Id
-          Is_deleted: false,                 // Only fetch tasks that are not deleted
-        }
+  const { Assigned_Emp_Id } = req.params;
+  const { page = 1, limit = 5, search = '' } = req.query; // Extract search, page, and limit from query parameters
+  const offset = (parseInt(page as string) - 1) * parseInt(limit as string); // Calculate offset
+
+  try {
+    // Query the database to find all tasks assigned to the employee and exclude completed tasks
+    const { count, rows: taskDetails } = await TaskDetails.findAndCountAll({
+      where: {
+        Assigned_Emp_Id: Assigned_Emp_Id,  // Filter by Assigned_Emp_Id
+        Is_deleted: false,                 // Only fetch tasks that are not deleted
+        Status: {                          // Exclude tasks that are marked as completed
+          [Op.ne]: 'Completed'             // Sequelize 'not equal' operator to exclude completed tasks
+        },
+        Task_Details: {                    // Search in Task_Details
+          [Op.iLike]: `%${search}%`  
+        },
+      },
+      limit: parseInt(limit as string),   // Set limit for pagination
+      offset: offset,                      // Set offset for pagination
+    });
+
+    // Check if tasks are found
+      return res.status(200).json({
+        total: count,               
+        page: parseInt(page as string),   
+        limit: parseInt(limit as string),   
+        tasks: taskDetails,                 
       });
-  
-      // Check if tasks are found
-      if (taskDetails.length > 0) {
-        return res.status(200).json(taskDetails);
-      } else {
-        return res.status(404).json({ message: "No tasks found for the assigned employee." });
-      }
-    } catch (error) {
-      console.error("Error fetching task details:", error);
-      return res.status(500).json({ message: "An error occurred while fetching task details." });
-    }
-  });
+    
+  } catch (error) {
+    console.error("Error fetching task details:", error);
+    return res.status(500).json({ message: "An error occurred while fetching task details." });
+  }
+});
+
+
+// EmploySideRoute.get("/CompletedTask/:Assigned_Emp_Id", async (req: Request, res: Response) => {
+//   const { Assigned_Emp_Id } = req.params;
+//   const search = req.query.search as string || ''; // Search term from query parameters
+//   const page = parseInt(req.query.page as string) || 1; // Current page number
+//   const limit = parseInt(req.query.limit as string) || 10; // Number of items per page
+//   const offset = (page - 1) * limit; // Calculate offset for pagination
+
+//   try {
+//     // Query the database to find all tasks assigned to the employee that are completed
+//     const taskDetails = await TaskDetails.findAndCountAll({
+//       where: {
+//         Assigned_Emp_Id: Assigned_Emp_Id, // Filter by Assigned_Emp_Id
+//         Is_deleted: false, // Only fetch tasks that are not deleted
+//         Status: 'Completed', // Only fetch completed tasks
+//         ...(search && { // If a search term is provided, add the search condition
+//           Task_Details: { [Op.like]: `%${search}%` }, // Assuming `Title` is the field to search
+//         }),
+//       },
+//       limit: limit, // Limit the results per page
+//       offset: offset, // Pagination offset
+//     });
+
+//     // Check if tasks are found
+//     if (taskDetails.rows.length > 0) {
+//       return res.status(200).json({
+//         tasks: taskDetails.rows,
+//         total: taskDetails.count, // Total number of matching tasks
+//         totalPages: Math.ceil(taskDetails.count / limit), // Total number of pages
+//         currentPage: page, // Current page
+//       });
+//     } else {
+//       return res.status(404).json({ message: "No tasks found for the assigned employee." });
+//     }
+//   } catch (error) {
+//     console.error("Error fetching task details:", error);
+//     return res.status(500).json({ message: "An error occurred while fetching task details." });
+//   }
+// });
+
+EmploySideRoute.get("/CompletedTask/:Assigned_Emp_Id", async (req: Request, res: Response) => {
+  const { Assigned_Emp_Id } = req.params;
+  const { page = 1, limit = 5, search = '' } = req.query; // Extract search, page, and limit from query parameters
+  const offset = (parseInt(page as string) - 1) * parseInt(limit as string); // Calculate offset
+
+  try {
+    // Query the database to find all tasks assigned to the employee and exclude completed tasks
+    const { count, rows: taskDetails } = await TaskDetails.findAndCountAll({
+      where: {
+        Assigned_Emp_Id: Assigned_Emp_Id,  // Filter by Assigned_Emp_Id
+        Is_deleted: false,                 // Only fetch tasks that are not deleted
+        Status: 'Completed', // Only fetch completed tasks
+        Task_Details: {                    // Search in Task_Details
+          [Op.iLike]: `%${search}%`  
+        },
+      },
+      limit: parseInt(limit as string),   // Set limit for pagination
+      offset: offset,                      // Set offset for pagination
+    });
+
+    // Check if tasks are found
+   
+      return res.status(200).json({
+        total: count,               
+        page: parseInt(page as string),   
+        limit: parseInt(limit as string),   
+        tasks: taskDetails,                 
+      });
+
+  } catch (error) {
+    console.error("Error fetching task details:", error);
+    return res.status(500).json({ message: "An error occurred while fetching task details." });
+  }
+});
 
 
   //update
