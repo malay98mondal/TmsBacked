@@ -63,5 +63,4 @@ Employee.init(
 );
 
 
-
 export default Employee;

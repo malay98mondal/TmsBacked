@@ -58,21 +58,21 @@ employeeRoutes.get('/role/:roleId', async (req: Request, res: Response) => {
 
 // 1. Create a new employee
 employeeRoutes.post('/post', async (req: Request, res: Response) => {
-    const { Employee_name, Role_Id } = req.body; // Add other employee attributes as needed
+    const { Employee_name } = req.body; // Add other employee attributes as needed
 
     try {
         // Validate input data
-        if ( !Employee_name || !Role_Id) {
+        if ( !Employee_name ) {
             return res.status(400).json({
                 success: false,
-                message: ' Employee_name, and Role_Id are required.',
+                message: ' Employee_name are required.',
             });
         }
 
         const newEmployee = await Employee.create({
            
             Employee_name,
-            Role_Id,
+            Role_Id :2,
             Is_deleted: false, // Default value
         });
 
