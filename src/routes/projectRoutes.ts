@@ -1,15 +1,14 @@
 // routes/projectRoutes.ts
 import express, { Request, Response } from 'express';
 import Project from '../db/models/Tbl_Project';
+import { authenticateManager } from '../middleware/authenticateManager';
 
 
 const projectRoutes = express.Router();
 
-projectRoutes.post("/addProject", async (req: any, res:any) => {
+projectRoutes.post("/addProject",authenticateManager, async (req: any, res:any) => {
   try {
     const { Project_Name, Status } = req.body;
-
-    // Input validation (optional)
     if (!Project_Name || !Status) {
       return res.status(400).json({ error: "Project_Name and Status are required." });
     }
@@ -31,7 +30,7 @@ projectRoutes.post("/addProject", async (req: any, res:any) => {
 
 
 
-projectRoutes.get('/projects', async (req: Request, res: Response) => {
+projectRoutes.get('/projects',authenticateManager, async (req: Request, res: Response) => {
   try {
     const projects = await Project.findAll({
       where: {

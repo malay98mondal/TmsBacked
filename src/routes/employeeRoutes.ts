@@ -1,13 +1,25 @@
 import express, { Request, Response } from 'express';
 import Employee from '../db/models/Tbl_Employee';
 import Role from '../db/models/Tbl_Role';
+import { authenticateManager } from '../middleware/authenticateManager';
+import { Op } from 'sequelize';
+import bcrypt from 'bcrypt';
 
 const employeeRoutes = express.Router();
 
-// 1. Fetching all employee details
-employeeRoutes.get('/GetEmployee', async (req: Request, res: Response) => {
+employeeRoutes.get('/GetEmployee', authenticateManager, async (req: any, res: any) => {
     try {
-        const employees = await Employee.findAll({ where: { Is_deleted: false } });
+        const userIdToExclude = req.user.Emp_Id;
+
+        const employees = await Employee.findAll({
+            where: {
+                Is_deleted: false,
+                Emp_Id: {
+                    [Op.ne]: userIdToExclude,  // Exclude the employee with the id from the token
+                },
+            },  
+        });
+
         return res.status(200).json({
             success: true,
             data: employees,
@@ -23,7 +35,6 @@ employeeRoutes.get('/GetEmployee', async (req: Request, res: Response) => {
 
 
 
-// 3. Fetching all employee details by Role_Id
 employeeRoutes.get('/role/:roleId', async (req: Request, res: Response) => {
     const roleId = req.params.roleId;
     try {
@@ -56,24 +67,40 @@ employeeRoutes.get('/role/:roleId', async (req: Request, res: Response) => {
 
 //post API
 
-// 1. Create a new employee
-employeeRoutes.post('/post', async (req: Request, res: Response) => {
-    const { Employee_name } = req.body; // Add other employee attributes as needed
+employeeRoutes.post('/post',authenticateManager, async (req: Request, res: Response) => {
+    const { Employee_name, email, password } = req.body;
 
     try {
-        // Validate input data
-        if ( !Employee_name ) {
+        if (!Employee_name || !email || !password) {
             return res.status(400).json({
                 success: false,
-                message: ' Employee_name are required.',
+                message: 'Employee name, email, and password are required.',
             });
         }
 
+        const existingEmployee = await Employee.findOne({ 
+            where: { 
+                email, 
+                Is_deleted: false
+            } 
+        });
+
+        if (existingEmployee) {
+            return res.status(400).json({
+                success: false,
+                message: 'Email is already in use.',
+            });
+        }
+
+        // Hash the password
+        const hashed_password = bcrypt.hashSync(password, 7);
+
         const newEmployee = await Employee.create({
-           
             Employee_name,
-            Role_Id :2,
-            Is_deleted: false, // Default value
+            Role_Id: 2,
+            email,
+            password: hashed_password,
+            Is_deleted: false,
         });
 
         return res.status(201).json({
@@ -89,38 +116,5 @@ employeeRoutes.post('/post', async (req: Request, res: Response) => {
     }
 });
 
-// 2. Create a new employee by Role_Id
-employeeRoutes.post('/by-role/:roleId', async (req: any, res: any) => {
-    const roleId = req.params.roleId;
-    const { Project_Id, Employee_name } = req.body; // Add other employee attributes as needed
-
-    try {
-        // Validate input data
-        if (!Project_Id || !Employee_name) {
-            return res.status(400).json({
-                success: false,
-                message: 'Employee_name are required.',
-            });
-        }
-
-        const newEmployee = await Employee.create({
-            Employee_name,
-            Role_Id: roleId,
-            Is_deleted: false, // Default value
-        });
-
-        return res.status(201).json({
-            success: true,
-            data: newEmployee,
-        });
-    } catch (error: any) {
-        return res.status(500).json({
-            success: false,
-            message: 'Failed to create the employee by Role_Id',
-            error: error.message,
-        });
-    }
-});
-// Set up the association
 Employee.belongsTo(Role, { foreignKey: 'Role_Id', as: 'Role' }); // Ensure to use an alias if needed
 export default employeeRoutes;

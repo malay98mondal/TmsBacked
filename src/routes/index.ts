@@ -10,11 +10,16 @@ import projectEmployeeUpdateRoute from './patchApi/projectEmployeeRoutesUpdate';
 import projectUpdateRoute from './patchApi/projectupdateRoutes';
 import roleUpdateRoute from './patchApi/roleUpdateRoutes';
 import taskDetailsUpdateRoute from './patchApi/taskDetailsUpdateRoutes';
+import AuthRoute from './Auth/AuthRoute';
+import { authenticateManager } from '../middleware/authenticateManager';
 
 
 
 
 const routes = Router();
+
+routes.use('/auth', AuthRoute);
+
 routes.use('/GetProject', projectRoutes);
 routes.use('/GetRole', roleRoutes);
 routes.use('/Employee', employeeRoutes);

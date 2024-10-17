@@ -4,12 +4,13 @@ import Project from '../db/models/Tbl_Project';
 import TaskDetails, { TaskDetailsInput } from '../db/models/Tbl_TaskDetails';
 import { Op } from 'sequelize';
 import Employee from '../db/models/Tbl_Employee';
+import { authenticateMember } from '../middleware/authenticateMember';
 
 const EmploySideRoute = Router();
 
 
-EmploySideRoute.get("/assigned/:Assigned_Emp_Id", async (req: Request, res: Response) => {
-  const { Assigned_Emp_Id } = req.params;
+EmploySideRoute.get("/assigned",authenticateMember, async (req: any, res: any) => {
+  const Assigned_Emp_Id = req.user.Emp_Id;
   const { page = 1, limit = 5, search = '' } = req.query; // Extract search, page, and limit from query parameters
   const offset = (parseInt(page as string) - 1) * parseInt(limit as string); // Calculate offset
 
@@ -84,8 +85,8 @@ EmploySideRoute.get("/assigned/:Assigned_Emp_Id", async (req: Request, res: Resp
 //   }
 // });
 
-EmploySideRoute.get("/CompletedTask/:Assigned_Emp_Id", async (req: Request, res: Response) => {
-  const { Assigned_Emp_Id } = req.params;
+EmploySideRoute.get("/CompletedTask",authenticateMember, async (req: any, res: any) => {
+  const Assigned_Emp_Id = req.user.Emp_Id;
   const { page = 1, limit = 5, search = '' } = req.query; // Extract search, page, and limit from query parameters
   const offset = (parseInt(page as string) - 1) * parseInt(limit as string); // Calculate offset
 
@@ -122,7 +123,7 @@ EmploySideRoute.get("/CompletedTask/:Assigned_Emp_Id", async (req: Request, res:
 
   //update
 
-  EmploySideRoute.put('/UpdateTask/:Task_details_Id', async (req, res) => {
+  EmploySideRoute.put('/UpdateTask/:Task_details_Id',authenticateMember, async (req, res) => {
     try {
         const { Task_details_Id } = req.params;
         const { Status, Remarks } = req.body;

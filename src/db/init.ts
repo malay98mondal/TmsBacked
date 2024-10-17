@@ -7,6 +7,7 @@ import TaskDetails from "./models/Tbl_TaskDetails";
 import { addProject } from "./FixedData/projectData"
 import { addRole } from "./FixedData/roleData";
 import ProjectEmployee from "./models/Tbl_ProjectEmployee";
+import { addDefaultEmployees } from "./FixedData/addEmploy";
 const isDev = true
 
 
@@ -25,11 +26,9 @@ async function init() {
   await ProjectEmployee.sync({ alter: isDev });
 
   
-    // Insert demo data after syncing
-    await addProject(); // Call the function to add data to the Tbl_Project table
-    // Insert demo data after syncing
-    await addRole(); // Call the function to add data to the Tbl_Project table
-
+    await addProject(); 
+    await addRole();
+    await addDefaultEmployees();
     
  
   }
