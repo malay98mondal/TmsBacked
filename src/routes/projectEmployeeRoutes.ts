@@ -3,6 +3,7 @@ import ProjectEmployee from '../db/models/Tbl_ProjectEmployee';
 import Employee from '../db/models/Tbl_Employee';
 import Role from '../db/models/Tbl_Role';
 import Project from '../db/models/Tbl_Project';
+import { authenticateManager } from '../middleware/authenticateManager';
 
 
 const projectEmployeeRoutes = express.Router();
@@ -84,7 +85,7 @@ projectEmployeeRoutes.post('/:projectId', async (req: any, res: any) => {
 // Get API
 
 // // Get all project employees by Project_Id, including Employee_name
-projectEmployeeRoutes.get('/:projectId', async (req: any, res: any) => {
+projectEmployeeRoutes.get('/:projectId',authenticateManager, async (req: any, res: any) => {
     const projectIdString = req.params.projectId; // Get Project_Id from URL parameters
 
     try {

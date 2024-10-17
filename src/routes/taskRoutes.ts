@@ -7,6 +7,7 @@ import Employee from '../db/models/Tbl_Employee';
 import multer from 'multer';
 import xlsx from 'xlsx';
 import Role from '../db/models/Tbl_Role';
+import { authenticateTeamLead } from '../middleware/autherticateTeamLead';
 
 const Task = Router();
 
@@ -14,8 +15,9 @@ const Task = Router();
 const storage = multer.memoryStorage(); // Store files in memory
 const upload = multer({ storage });
 
-Task.get('/tasks/:empId', async (req: Request, res: Response) => {
-  const empId = parseInt(req.params.empId);
+Task.get('/tasks',authenticateTeamLead, async (req: any, res: any) => {
+  // const empId = parseInt(req.params.empId);
+  const empId = req.user.Emp_Id;
 
   const { search = '', page = 1, limit = 5 } = req.query; // Get search query, page, and limit from request query
   const offset = (parseInt(page as string) - 1) * parseInt(limit as string);
@@ -86,10 +88,11 @@ Task.get('/tasks/:empId', async (req: Request, res: Response) => {
 
 
 
-Task.post('/CreateTask', async (req:any, res:any) => {
+Task.post('/CreateTask',authenticateTeamLead, async (req:any, res:any) => {
+  const Emp_Id = req.user.Emp_Id;
+
     try {
       const {
-        Emp_Id,
         Project_Id,
         Start_Time,
         Task_Details,
@@ -128,9 +131,10 @@ Task.post('/CreateTask', async (req:any, res:any) => {
   });
 
 
-  Task.get("/project-employees/:projectId/exclude/:employeeId", async (req: Request, res: Response) => {
-    const { projectId, employeeId } = req.params;
-  
+  Task.get("/project-employees/:projectId/exclude",authenticateTeamLead, async (req: any, res: any) => {
+    const { projectId } = req.params;
+    const employeeId = req.user.Emp_Id;
+
     try {
       const projectEmployees = await ProjectEmployee.findAll({
         where: {
@@ -168,14 +172,15 @@ Task.post('/CreateTask', async (req:any, res:any) => {
  * Import tasks from an Excel file.
  * The file is uploaded and parsed, and tasks are inserted into the database.
  */
-Task.post('/importTasks/:Emp_Id/:Project_Id', upload.single('file'), async (req: any, res: Response) => {
+Task.post('/importTasks/:Project_Id', upload.single('file'), async (req: any, res: Response) => {
   try {
     // Check if a file is uploaded
     if (!req.file) {
       return res.status(400).json({ message: 'No file uploaded' });
     }
-    const {  Emp_Id,Project_Id } = req.params;
-   // Parse the uploaded Excel file
+    const { Project_Id } = req.params;
+    const Emp_Id = req.user.Emp_Id;
+
     const workbook = xlsx.read(req.file.buffer, { type: 'buffer' });
     const sheetName = workbook.SheetNames[0]; // Get the first sheet
     const sheet = workbook.Sheets[sheetName];
@@ -220,7 +225,7 @@ Task.post('/importTasks/:Emp_Id/:Project_Id', upload.single('file'), async (req:
   }
 });
 
-Task.get("/task-details/:id", async (req: Request, res: Response) => {
+Task.get("/task-details/:id",authenticateTeamLead, async (req: Request, res: Response) => {
     const { id } = req.params;
   
     try {

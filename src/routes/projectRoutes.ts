@@ -1,12 +1,36 @@
 // routes/projectRoutes.ts
 import express, { Request, Response } from 'express';
 import Project from '../db/models/Tbl_Project';
+import { authenticateManager } from '../middleware/authenticateManager';
 
 
 const projectRoutes = express.Router();
 
-// Get all non-deleted projects
-projectRoutes.get('/projects', async (req: Request, res: Response) => {
+projectRoutes.post("/addProject",authenticateManager, async (req: any, res:any) => {
+  try {
+    const { Project_Name, Status } = req.body;
+    if (!Project_Name || !Status) {
+      return res.status(400).json({ error: "Project_Name and Status are required." });
+    }
+
+    // Create a new project
+    const newProject = await Project.create({
+      Project_Name,
+      Status,
+      Is_deleted:  false, 
+    });
+
+    return res.status(201).json({ success: true, data: newProject });
+  } catch (error) {
+    console.error("Error creating project:", error);
+    return res.status(500).json({ success: false, error: "Failed to create project." });
+  }
+});
+
+
+
+
+projectRoutes.get('/projects',authenticateManager, async (req: Request, res: Response) => {
   try {
     const projects = await Project.findAll({
       where: {

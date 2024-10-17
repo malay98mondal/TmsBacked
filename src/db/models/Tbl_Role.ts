@@ -1,5 +1,6 @@
 import { DataTypes, Model, Optional } from "sequelize";
 import sequelizeConnection from "../config";
+import Employee from "./Tbl_Employee";
 
 
 interface RoleAttributes {
@@ -48,6 +49,8 @@ Role.init(
   }
 );
 
-
+Role.hasMany(Employee, {
+  foreignKey: 'Role_Id',
+});
 
 export default Role;
