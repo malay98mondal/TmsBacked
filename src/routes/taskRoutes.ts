@@ -166,13 +166,7 @@ Task.post('/CreateTask',authenticateTeamLead, async (req:any, res:any) => {
     }
   });
   
-
-  /**
- * POST /importTasks
- * Import tasks from an Excel file.
- * The file is uploaded and parsed, and tasks are inserted into the database.
- */
-Task.post('/importTasks/:Project_Id', upload.single('file'), async (req: any, res: Response) => {
+Task.post('/importTasks/:Project_Id',authenticateTeamLead, upload.single('file'), async (req: any, res: Response) => {
   try {
     // Check if a file is uploaded
     if (!req.file) {

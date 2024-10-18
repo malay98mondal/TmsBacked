@@ -32,6 +32,53 @@ employeeRoutes.get('/GetEmployee', authenticateManager, async (req: any, res: an
         });
     }
 });
+employeeRoutes.get('/GetEmployee1', authenticateManager, async (req: any, res: any) => {
+    try {
+        const userIdToExclude = req.user.Emp_Id;
+        const { page = 1, limit = 10, search = '' } = req.query; // Defaults and query params
+
+        const numericPage = parseInt(page); // Convert to number
+        const numericLimit = parseInt(limit); // Convert to number
+        const offset = (numericPage - 1) * numericLimit; // Offset for pagination
+
+        const whereClause: any = {
+            Is_deleted: false,
+            Emp_Id: {
+                [Op.ne]: userIdToExclude,
+            },
+        };
+
+        if (search) {
+            whereClause.Employee_name = {
+                [Op.like]: `%${search}%`,
+            };
+        }
+
+        const { rows: employees, count: total } = await Employee.findAndCountAll({
+            where: whereClause,
+            limit: numericLimit, // Use numeric limit
+            offset: offset, // Use numeric offset
+        });
+
+        return res.status(200).json({
+            success: true,
+            data: employees,
+            total, // Total number of employees matching the query
+            page: numericPage,
+            totalPages: Math.ceil(total / numericLimit),
+        });
+    } catch (error: any) {
+        return res.status(500).json({
+            success: false,
+            message: 'Failed to retrieve employee details',
+            error: error.message,
+        });
+    }
+});
+
+
+  
+
 
 
 
