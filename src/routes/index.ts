@@ -15,11 +15,16 @@ import taskDetailsDeleteRoute from './deleteApi/taskDetailsDelete';
 import roleDeleteRoute from './deleteApi/roleDelete';
 import projectEmployeeDeleteRoute from './deleteApi/projectEmployeeDelele';
 import projecDeletetRoute from './deleteApi/projectDelete';
+import AuthRoute from './Auth/AuthRoute';
+import { authenticateManager } from '../middleware/authenticateManager';
 
 
 
 
 const routes = Router();
+
+routes.use('/auth', AuthRoute);
+
 routes.use('/GetProject', projectRoutes);
 routes.use('/GetRole', roleRoutes);
 routes.use('/Employee', employeeRoutes);

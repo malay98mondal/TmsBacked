@@ -7,6 +7,7 @@ import Employee from '../db/models/Tbl_Employee';
 import multer from 'multer';
 import xlsx from 'xlsx';
 import Role from '../db/models/Tbl_Role';
+import { authenticateTeamLead } from '../middleware/autherticateTeamLead';
 
 const Task = Router();
 
@@ -14,49 +15,84 @@ const Task = Router();
 const storage = multer.memoryStorage(); // Store files in memory
 const upload = multer({ storage });
 
-// API to get tasks by employee ID
-Task.get('/tasks/:empId', async (req: Request, res: Response) => {
-    const empId = parseInt(req.params.empId);
-  
-    try {
-      // Find projects associated with the employee
-      const projects = await ProjectEmployee.findAll({
-        where: { Emp_Id: empId, Is_deleted: false },
-        include: [{ model: Project }],
-      });
-  
-      if (projects.length === 0) {
-        return res.status(404).json({ message: 'No projects found for this employee.' });
-      }
-  
-      // Extract project ID and name (assuming the employee can be associated with only one project)
-      const projectId = projects[0].Project_Id; // Get the first project ID
-      const projectName = projects[0].Project?.Project_Name; // Get the first project name
-  
-      // Find tasks associated with the project
-      const tasks = await TaskDetails.findAll({
-        where: {
-          Project_Id: projectId,
-          Is_deleted: false,
-        },
-      });
-  
-      // Return project name and tasks in the response
-      return res.status(200).json({
-        projectId:projectId,
-        ProjectName: projectName,
-        Tasks: tasks,
-      });
-    } catch (error) {
-      console.error(error);
-      return res.status(500).json({ message: 'An error occurred while fetching tasks.' });
-    }
-  });
+Task.get('/tasks',authenticateTeamLead, async (req: any, res: any) => {
+  // const empId = parseInt(req.params.empId);
+  const empId = req.user.Emp_Id;
 
-Task.post('/CreateTask', async (req:any, res:any) => {
+  const { search = '', page = 1, limit = 5 } = req.query; // Get search query, page, and limit from request query
+  const offset = (parseInt(page as string) - 1) * parseInt(limit as string);
+
+  try {
+    // Find projects associated with the employee
+    const projects = await ProjectEmployee.findAll({
+      where: { Emp_Id: empId, Is_deleted: false },
+      include: [{ model: Project }],
+    });
+
+    if (projects.length === 0) {
+      return res.status(404).json({ message: 'No projects found for this employee.' });
+    }
+
+    const projectId = projects[0].Project_Id;
+    const projectName = projects[0].Project?.Project_Name;
+
+    // Find tasks associated with the project, applying search and pagination
+    const tasks = await TaskDetails.findAndCountAll({
+      where: {
+        Project_Id: projectId,
+        Is_deleted: false,
+        [Op.or]: [
+          {
+            Task_Details: {
+              [Op.iLike]: `%${search}%`, // Case-insensitive search in Task_Details
+            },
+          },
+          {
+            '$Employee.Employee_name$': {
+              [Op.iLike]: `%${search}%`, // Case-insensitive search in Employee_name
+            },
+          },
+        ],
+      },
+      offset, // Apply pagination offset
+      limit: parseInt(limit as string), // Apply pagination limit
+      include: [
+        {
+          model: Employee, // Include the Employee model
+          attributes: ['Emp_Id', 'Employee_name'], // Specify attributes you want from Employee
+        },
+      ],
+    });
+
+    // Map through tasks to include employee id and name in each task
+    const tasksWithEmployeeInfo = tasks.rows.map((task) => ({
+      ...task.toJSON(),
+      employeeId: task.Employee?.Emp_Id, // Get employee ID from the included Employee model
+      employeeName: task.Employee?.Employee_name, // Get employee name from the included Employee model
+    }));
+
+    // Return paginated data with total count for frontend pagination
+    return res.status(200).json({
+      projectId,
+      projectName,
+      tasks: tasksWithEmployeeInfo,
+      total: tasks.count, // Total number of matching tasks
+      page: parseInt(page as string),
+      limit: parseInt(limit as string),
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: 'An error occurred while fetching tasks.' });
+  }
+});
+
+
+
+Task.post('/CreateTask',authenticateTeamLead, async (req:any, res:any) => {
+  const Emp_Id = req.user.Emp_Id;
+
     try {
       const {
-        Emp_Id,
         Project_Id,
         Start_Time,
         Task_Details,
@@ -95,9 +131,10 @@ Task.post('/CreateTask', async (req:any, res:any) => {
   });
 
 
-  Task.get("/project-employees/:projectId/exclude/:employeeId", async (req: Request, res: Response) => {
-    const { projectId, employeeId } = req.params;
-  
+  Task.get("/project-employees/:projectId/exclude",authenticateTeamLead, async (req: any, res: any) => {
+    const { projectId } = req.params;
+    const employeeId = req.user.Emp_Id;
+
     try {
       const projectEmployees = await ProjectEmployee.findAll({
         where: {
@@ -127,67 +164,78 @@ Task.post('/CreateTask', async (req:any, res:any) => {
       console.error("Error fetching project employees:", error);
       res.status(500).json({ message: "An error occurred while fetching project employees." });
     }
+  }); 
+  
+  Task.post('/importTasks/:Project_Id', authenticateTeamLead, upload.single('file'), async (req: any, res: Response) => {
+    try {
+      // Check if a file is uploaded
+      if (!req.file) {
+        return res.status(400).json({ message: 'No file uploaded' });
+      }
+      const { Project_Id } = req.params;
+      const Emp_Id = req.user.Emp_Id;
+  
+      const workbook = xlsx.read(req.file.buffer, { type: 'buffer' });
+      const sheetName = workbook.SheetNames[0]; // Get the first sheet
+      const sheet = workbook.Sheets[sheetName];
+      const data = xlsx.utils.sheet_to_json(sheet); // Convert the sheet to JSON format
+  
+      // Helper function to convert Excel time fractions to HH:mm format
+      const convertExcelTimeToTimeString = (excelTime: any) => {
+        if (typeof excelTime === 'number') {
+          const totalMinutes = Math.round(excelTime * 24 * 60); // Convert days fraction to total minutes
+          const hours = Math.floor(totalMinutes / 60);
+          const minutes = totalMinutes % 60;
+          return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+        }
+        return excelTime; // If it's not a number, return as it is
+      };
+  
+      // Iterate over each row in the Excel sheet and create tasks
+      const tasks = await Promise.all(data.map(async (row: any) => {
+        let {
+          Start_Time,
+          Task_Details,
+          End_Date,
+          End_Time,
+          Role_Id,
+          Assigned_Emp_Id,
+        } = row;
+  
+        // Convert Excel time fractions to proper time strings in HH:mm format
+        Start_Time = convertExcelTimeToTimeString(Start_Time);
+        End_Time = convertExcelTimeToTimeString(End_Time);
+  
+        return TaskDetails.create({
+          Emp_Id,
+          Project_Id,
+          Status: 'In Progress',
+          Start_Date: new Date(),
+          Start_Time,
+          Task_Details,
+          End_Date,
+          End_Time,
+          Role_Id,
+          Assigned_Emp_Id,
+          Is_deleted: false,
+        });
+      }));
+  
+      return res.status(201).json({
+        message: 'Tasks imported successfully',
+        tasks,
+      });
+    } catch (error: any) {
+      console.error(error);
+      return res.status(500).json({
+        message: 'Error importing tasks',
+        error: error.message,
+      });
+    }
   });
   
 
-  /**
- * POST /importTasks
- * Import tasks from an Excel file.
- * The file is uploaded and parsed, and tasks are inserted into the database.
- */
-Task.post('/importTasks/:Emp_Id/:Project_Id', upload.single('file'), async (req: any, res: Response) => {
-  try {
-    // Check if a file is uploaded
-    if (!req.file) {
-      return res.status(400).json({ message: 'No file uploaded' });
-    }
-    const {  Emp_Id,Project_Id } = req.params;
-   // Parse the uploaded Excel file
-    const workbook = xlsx.read(req.file.buffer, { type: 'buffer' });
-    const sheetName = workbook.SheetNames[0]; // Get the first sheet
-    const sheet = workbook.Sheets[sheetName];
-    const data = xlsx.utils.sheet_to_json(sheet); // Convert the sheet to JSON format
-
-    // Iterate over each row in the Excel sheet and create tasks
-    const tasks = await Promise.all(data.map(async (row: any) => {
-      const {
-        Start_Time,
-        Task_Details,
-        End_Date,
-        End_Time,
-        Role_Id,
-        Assigned_Emp_Id,
-      } = row;
-
-      return TaskDetails.create({
-        Emp_Id,
-        Project_Id,
-        Status: 'In Progress',
-        Start_Date: new Date(),
-        Start_Time,
-        Task_Details,
-        End_Date,
-        End_Time,
-        Role_Id,
-        Assigned_Emp_Id,
-        Is_deleted: false,
-      });
-    }));
-
-    return res.status(201).json({
-      message: 'Tasks imported successfully',
-      tasks,
-    });
-  } catch (error: any) {
-    console.error(error);
-    return res.status(500).json({
-      message: 'Error importing tasks',
-      error: error.message,
-    });
-  }
-});
-
-Task.get("/task-details/:id", async (req: Request, res: Response) => {
+Task.get("/task-details/:id",authenticateTeamLead, async (req: Request, res: Response) => {
     const { id } = req.params;
   
     try {

@@ -8,6 +8,7 @@ import Employee from "./Tbl_Employee";
 interface ProjectEmployeeAttributes {
   ProjectMember_Id: number;
   Project_Id: number;
+  Degesination:string;
   Emp_Id: number;
   Role_Id:number;
   Is_deleted: boolean;
@@ -22,6 +23,7 @@ class ProjectEmployee extends Model<ProjectEmployeeAttributes, ProjectEmployeeIn
   public ProjectMember_Id!: number;
   public Project_Id!: number;
   public Emp_Id!: number;
+  public Degesination: string;
   public Role_Id!:number;
   public Is_deleted!: boolean;
     Employee: any;
@@ -52,6 +54,9 @@ ProjectEmployee.init(
     Role_Id: {
       type: DataTypes.INTEGER.UNSIGNED,
       
+    },
+    Degesination:{
+      type:DataTypes.STRING(50)
     },
     Is_deleted: {
       type: DataTypes.BOOLEAN,
