@@ -235,55 +235,116 @@ Task.post('/CreateTask',authenticateTeamLead, async (req:any, res:any) => {
   });
   
 
-Task.get("/task-details/:id",authenticateTeamLead, async (req: Request, res: Response) => {
-    const { id } = req.params;
+// Task.get("/task-details/:id",authenticateTeamLead, async (req: Request, res: Response) => {
+//     const { id } = req.params;
   
-    try {
-      // Step 1: Fetch the task details
+//     try {
+//       // Step 1: Fetch the task details
+//       const taskDetails = await TaskDetails.findOne({
+//         where: { Task_details_Id: id, Is_deleted: false }, // Only fetch if not deleted
+//       });
+  
+//       if (!taskDetails) {
+//         return res.status(404).json({ message: "Task not found" });
+//       }
+  
+//       // Step 2: Extract Emp_Id and Role_Id
+//       const { Assigned_Emp_Id, Role_Id,Project_Id } = taskDetails;
+  
+//       // Step 3: Fetch Employee details
+//       const employee = await Employee.findOne({
+//         where: { Emp_Id:Assigned_Emp_Id }, // Assuming Emp_Id is the primary key for Employee
+//         attributes: ['Emp_Id', 'Employee_name'], // Specify the fields you want
+//       });
+  
+//       // Step 4: Fetch Role details
+//       const role = await Role.findOne({
+//         where: { Role_Id }, // Assuming Role_Id is the primary key for Role
+//         attributes: ['Role_Id', 'Name'], // Specify the fields you want
+//       });
+//       const project = await Project.findOne({
+//         where: { Project_Id:Project_Id }, // Assuming Emp_Id is the primary key for Employee
+//         attributes: [ 'Project_Name'], // Specify the fields you want
+//       });
+  
+//       // Combine the results
+//       const result = {
+//         taskDetails,
+//         employee: employee || null, // Set to null if employee is not found
+//         role: role || null,
+//         project :project|| null
+//       };
+  
+//       return res.status(200).json(result);
+//     } catch (error) {
+//       console.error("Error fetching task details:", error);
+//       return res.status(500).json({ message: "An error occurred while fetching the task details" });
+//     }
+//   });
+  
+Task.get("/task-details/:id", authenticateTeamLead, async (req: Request, res: Response) => {
+  const { id } = req.params;
+
+  try {
+      // Step 1: Fetch the task details from TaskDetails table
       const taskDetails = await TaskDetails.findOne({
-        where: { Task_details_Id: id, Is_deleted: false }, // Only fetch if not deleted
+          where: { Task_details_Id: id, Is_deleted: false }, // Only fetch if not deleted
       });
-  
+
       if (!taskDetails) {
-        return res.status(404).json({ message: "Task not found" });
+          return res.status(404).json({ message: "Task not found" });
       }
-  
-      // Step 2: Extract Emp_Id and Role_Id
-      const { Assigned_Emp_Id, Role_Id,Project_Id } = taskDetails;
-  
-      // Step 3: Fetch Employee details
+
+      // Step 2: Extract Assigned_Emp_Id from TaskDetails
+      const { Assigned_Emp_Id, Project_Id } = taskDetails;
+
+      // Step 3: Fetch Employee details, which includes Role_Id
       const employee = await Employee.findOne({
-        where: { Emp_Id:Assigned_Emp_Id }, // Assuming Emp_Id is the primary key for Employee
-        attributes: ['Emp_Id', 'Employee_name'], // Specify the fields you want
+          where: { Emp_Id: Assigned_Emp_Id }, // Find employee by Emp_Id
+          attributes: ['Emp_Id', 'Employee_name', 'Role_Id'], // Include Role_Id
       });
-  
-      // Step 4: Fetch Role details
+
+      if (!employee) {
+          return res.status(404).json({ message: "Employee not found" });
+      }
+
+      // Step 4: Fetch Role details using Role_Id from Tbl_Employee
+      const { Role_Id } = employee;
       const role = await Role.findOne({
-        where: { Role_Id }, // Assuming Role_Id is the primary key for Role
-        attributes: ['Role_Id', 'Name'], // Specify the fields you want
+          where: { Role_Id }, // Find role by Role_Id
+          attributes: ['Role_Id', 'Name'], // Specify the fields to retrieve
       });
+
+      if (!role) {
+          return res.status(404).json({ message: "Role not found" });
+      }
+
+      // Step 5: Fetch Project details using Project_Id
       const project = await Project.findOne({
-        where: { Project_Id:Project_Id }, // Assuming Emp_Id is the primary key for Employee
-        attributes: [ 'Project_Name'], // Specify the fields you want
+          where: { Project_Id }, // Find project by Project_Id
+          attributes: ['Project_Name'], // Specify the fields to retrieve
       });
-  
+
       // Combine the results
       const result = {
-        taskDetails,
-        employee: employee || null, // Set to null if employee is not found
-        role: role || null,
-        project :project|| null
+          taskDetails,
+          employee: {
+              Emp_Id: employee.Emp_Id,
+              Employee_name: employee.Employee_name,
+          },
+          role: {
+              Role_Id: role.Role_Id,
+              Name: role.Name,
+          },
+          project: project ? { Project_Name: project.Project_Name } : null
       };
-  
+
       return res.status(200).json(result);
-    } catch (error) {
+  } catch (error) {
       console.error("Error fetching task details:", error);
       return res.status(500).json({ message: "An error occurred while fetching the task details" });
-    }
-  });
-  
-
-  
+  }
+});  
   
 export default Task;
 
