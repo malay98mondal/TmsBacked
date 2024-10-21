@@ -10,10 +10,9 @@ import { Op } from 'sequelize';
 const projectEmployeeRoutes = express.Router();
 
 
-
 projectEmployeeRoutes.post('/:projectId', async (req: any, res: any) => {
     const projectIdString = req.params.projectId; // Get Project_Id from URL parameters
-    const { Emp_Id, Role_Id, Degesination } = req.body; // Get Emp_Id and Role_Id from request body
+    const { Emp_Id, Role_Id, Degesination } = req.body; // Get Emp_Id, Role_Id, and Degesination from request body
 
     try {
         // Validate input data
@@ -41,6 +40,7 @@ projectEmployeeRoutes.post('/:projectId', async (req: any, res: any) => {
             where: {
                 Project_Id: projectIdNumber,
                 Emp_Id: Emp_Id,
+                Is_deleted: false
             },
         });
 
@@ -52,21 +52,25 @@ projectEmployeeRoutes.post('/:projectId', async (req: any, res: any) => {
             });
         }
 
-        // Check if there's already a team lead for the specified designation
-        const existingTeamLead = await ProjectEmployee.findOne({
-            where: {
-                Project_Id: projectIdNumber,
-                Degesination: Degesination,
-                Role_Id: Role_Id,
-            },
-        });
-
-        if (existingTeamLead) {
-            // If a team lead already exists for this designation, return an error
-            return res.status(409).json({
-                success: false,
-                message: `A team lead for the designation "${Degesination}" already exists in this project.`,
+        // Check if the designation requires a team lead
+        if (Role_Id === 2) { // Check for Team_Lead role
+            // Check if there's already a team lead for the specified designation
+            const existingTeamLead = await ProjectEmployee.findOne({
+                where: {
+                    Project_Id: projectIdNumber,
+                    Degesination: Degesination,
+                    Role_Id: 2, // Check specifically for team lead role
+                    Is_deleted: false
+                },
             });
+
+            if (existingTeamLead) {
+                // If a team lead already exists for this designation, return an error
+                return res.status(409).json({
+                    success: false,
+                    message: `A team lead for the designation "${Degesination}" already exists in this project.`,
+                });
+            }
         }
 
         // If the ProjectEmployee does not exist, create a new record
@@ -78,6 +82,7 @@ projectEmployeeRoutes.post('/:projectId', async (req: any, res: any) => {
             Is_deleted: false,
         });
 
+        // Update the employee's role
         await Employee.update(
             { Role_Id }, // Set new Role_Id from request body
             { where: { Emp_Id } } // Find employee by Emp_Id
@@ -96,7 +101,6 @@ projectEmployeeRoutes.post('/:projectId', async (req: any, res: any) => {
         });
     }
 });
-
 
 
 

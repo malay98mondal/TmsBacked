@@ -164,60 +164,76 @@ Task.post('/CreateTask',authenticateTeamLead, async (req:any, res:any) => {
       console.error("Error fetching project employees:", error);
       res.status(500).json({ message: "An error occurred while fetching project employees." });
     }
+  }); 
+  
+  Task.post('/importTasks/:Project_Id', authenticateTeamLead, upload.single('file'), async (req: any, res: Response) => {
+    try {
+      // Check if a file is uploaded
+      if (!req.file) {
+        return res.status(400).json({ message: 'No file uploaded' });
+      }
+      const { Project_Id } = req.params;
+      const Emp_Id = req.user.Emp_Id;
+  
+      const workbook = xlsx.read(req.file.buffer, { type: 'buffer' });
+      const sheetName = workbook.SheetNames[0]; // Get the first sheet
+      const sheet = workbook.Sheets[sheetName];
+      const data = xlsx.utils.sheet_to_json(sheet); // Convert the sheet to JSON format
+  
+      // Helper function to convert Excel time fractions to HH:mm format
+      const convertExcelTimeToTimeString = (excelTime: any) => {
+        if (typeof excelTime === 'number') {
+          const totalMinutes = Math.round(excelTime * 24 * 60); // Convert days fraction to total minutes
+          const hours = Math.floor(totalMinutes / 60);
+          const minutes = totalMinutes % 60;
+          return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+        }
+        return excelTime; // If it's not a number, return as it is
+      };
+  
+      // Iterate over each row in the Excel sheet and create tasks
+      const tasks = await Promise.all(data.map(async (row: any) => {
+        let {
+          Start_Time,
+          Task_Details,
+          End_Date,
+          End_Time,
+          Role_Id,
+          Assigned_Emp_Id,
+        } = row;
+  
+        // Convert Excel time fractions to proper time strings in HH:mm format
+        Start_Time = convertExcelTimeToTimeString(Start_Time);
+        End_Time = convertExcelTimeToTimeString(End_Time);
+  
+        return TaskDetails.create({
+          Emp_Id,
+          Project_Id,
+          Status: 'In Progress',
+          Start_Date: new Date(),
+          Start_Time,
+          Task_Details,
+          End_Date,
+          End_Time,
+          Role_Id,
+          Assigned_Emp_Id,
+          Is_deleted: false,
+        });
+      }));
+  
+      return res.status(201).json({
+        message: 'Tasks imported successfully',
+        tasks,
+      });
+    } catch (error: any) {
+      console.error(error);
+      return res.status(500).json({
+        message: 'Error importing tasks',
+        error: error.message,
+      });
+    }
   });
   
-Task.post('/importTasks/:Project_Id',authenticateTeamLead, upload.single('file'), async (req: any, res: Response) => {
-  try {
-    // Check if a file is uploaded
-    if (!req.file) {
-      return res.status(400).json({ message: 'No file uploaded' });
-    }
-    const { Project_Id } = req.params;
-    const Emp_Id = req.user.Emp_Id;
-
-    const workbook = xlsx.read(req.file.buffer, { type: 'buffer' });
-    const sheetName = workbook.SheetNames[0]; // Get the first sheet
-    const sheet = workbook.Sheets[sheetName];
-    const data = xlsx.utils.sheet_to_json(sheet); // Convert the sheet to JSON format
-
-    // Iterate over each row in the Excel sheet and create tasks
-    const tasks = await Promise.all(data.map(async (row: any) => {
-      const {
-        Start_Time,
-        Task_Details,
-        End_Date,
-        End_Time,
-        Role_Id,
-        Assigned_Emp_Id,
-      } = row;
-
-      return TaskDetails.create({
-        Emp_Id,
-        Project_Id,
-        Status: 'In Progress',
-        Start_Date: new Date(),
-        Start_Time,
-        Task_Details,
-        End_Date,
-        End_Time,
-        Role_Id,
-        Assigned_Emp_Id,
-        Is_deleted: false,
-      });
-    }));
-
-    return res.status(201).json({
-      message: 'Tasks imported successfully',
-      tasks,
-    });
-  } catch (error: any) {
-    console.error(error);
-    return res.status(500).json({
-      message: 'Error importing tasks',
-      error: error.message,
-    });
-  }
-});
 
 Task.get("/task-details/:id",authenticateTeamLead, async (req: Request, res: Response) => {
     const { id } = req.params;

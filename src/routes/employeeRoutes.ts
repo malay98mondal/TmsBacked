@@ -50,7 +50,7 @@ employeeRoutes.get('/GetEmployee1', authenticateManager, async (req: any, res: a
 
         if (search) {
             whereClause.Employee_name = {
-                [Op.like]: `%${search}%`,
+                [Op.iLike]: `%${search}%`,
             };
         }
 
@@ -144,7 +144,7 @@ employeeRoutes.post('/post',authenticateManager, async (req: Request, res: Respo
 
         const newEmployee = await Employee.create({
             Employee_name,
-            Role_Id: 2,
+            Role_Id: 3,
             email,
             password: hashed_password,
             Is_deleted: false,
