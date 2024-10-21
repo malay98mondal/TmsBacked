@@ -10,6 +10,11 @@ import projectEmployeeUpdateRoute from './patchApi/projectEmployeeRoutesUpdate';
 import projectUpdateRoute from './patchApi/projectupdateRoutes';
 import roleUpdateRoute from './patchApi/roleUpdateRoutes';
 import taskDetailsUpdateRoute from './patchApi/taskDetailsUpdateRoutes';
+import employeeDeleteRoute from './deleteApi/employeeDelete';
+import taskDetailsDeleteRoute from './deleteApi/taskDetailsDelete';
+import roleDeleteRoute from './deleteApi/roleDelete';
+import projectEmployeeDeleteRoute from './deleteApi/projectEmployeeDelele';
+import projecDeletetRoute from './deleteApi/projectDelete';
 
 
 
@@ -27,5 +32,14 @@ routes.use('/ProjectEmployeUpdateRoute',projectEmployeeUpdateRoute )
 routes.use('/ProjectUpdateRoute',projectUpdateRoute)
 routes.use('/roleUpdateRoutes',roleUpdateRoute)
 routes.use('/taskDetailsUpdateRoute',taskDetailsUpdateRoute)
+
+routes.use('/employeeDelete',employeeDeleteRoute)
+
+routes.use('/taskDetailsDelete',taskDetailsDeleteRoute)
+routes.use('/taskDelete',roleDeleteRoute)
+routes.use('/projectEmployeeDelete',projectEmployeeDeleteRoute)
+routes.use('/projectDelete',projecDeletetRoute)
+
+
 
 export default routes;
