@@ -99,6 +99,8 @@ Task.post('/CreateTask',authenticateTeamLead, async (req:any, res:any) => {
         End_Date,
         End_Time,
         Role_Id,
+        Actual_Start_Date,
+        Actual_Start_Time,
         Assigned_Emp_Id,
       } = req.body;
 
@@ -110,6 +112,8 @@ Task.post('/CreateTask',authenticateTeamLead, async (req:any, res:any) => {
         Start_Date :new Date(),
         Start_Time,
         Task_Details,
+        Actual_Start_Date,
+        Actual_Start_Time,
         End_Date,
         End_Time,
         Role_Id,
@@ -213,6 +217,8 @@ Task.post('/CreateTask',authenticateTeamLead, async (req:any, res:any) => {
           Start_Date: new Date(),
           Start_Time,
           Task_Details,
+          Actual_Start_Date: new Date(),
+          Actual_Start_Time:'',
           End_Date,
           End_Time,
           Role_Id,
