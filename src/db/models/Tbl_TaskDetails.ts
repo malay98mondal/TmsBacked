@@ -13,8 +13,8 @@ interface TaskDetailsAttributes {
   Start_Date: Date;
   Task_Details:string;
   Start_Time: string;
-   Actual_Start_Date: Date;
-   Actual_Start_Time: string;
+   Actual_Start_Date?: Date;
+   Actual_Start_Time?: string;
   End_Date?: Date;
   End_Time?: string;
   Extend_Start_Date?: Date;
@@ -41,8 +41,8 @@ class TaskDetails extends Model<TaskDetailsAttributes, TaskDetailsInput> impleme
   public Status!: string;
   public Start_Date!: Date;
   public Start_Time!: string;
-  public Actual_Start_Date: Date;
-  public Actual_Start_Time: string;
+  public Actual_Start_Date?: Date;
+  public Actual_Start_Time?: string;
   public Task_Details: string;
   public End_Date?: Date;
   public End_Time?: string;
