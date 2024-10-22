@@ -95,12 +95,11 @@ Task.post('/CreateTask',authenticateTeamLead, async (req:any, res:any) => {
       const {
         Project_Id,
         Start_Time,
+        Start_Date,
         Task_Details,
         End_Date,
         End_Time,
         Role_Id,
-        Actual_Start_Date,
-        Actual_Start_Time,
         Assigned_Emp_Id,
       } = req.body;
 
@@ -109,11 +108,9 @@ Task.post('/CreateTask',authenticateTeamLead, async (req:any, res:any) => {
         Emp_Id,
         Project_Id,
         Status :'In Progress',
-        Start_Date :new Date(),
+        Start_Date ,
         Start_Time,
         Task_Details,
-        Actual_Start_Date,
-        Actual_Start_Time,
         End_Date,
         End_Time,
         Role_Id,
