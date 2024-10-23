@@ -8,6 +8,7 @@ import multer from 'multer';
 import xlsx from 'xlsx';
 import Role from '../db/models/Tbl_Role';
 import { authenticateTeamLead } from '../middleware/autherticateTeamLead';
+import { parse, isValid } from 'date-fns';
 
 const Task = Router();
 
@@ -170,77 +171,170 @@ Task.post('/CreateTask',authenticateTeamLead, async (req:any, res:any) => {
     }
   }); 
   
+  // Task.post('/importTasks/:Project_Id', authenticateTeamLead, upload.single('file'), async (req: any, res: Response) => {
+  //   try {
+  //     // Check if a file is uploaded
+  //     if (!req.file) {
+  //       return res.status(400).json({ message: 'No file uploaded' });
+  //     }
+  //     const { Project_Id } = req.params;
+  //     const Emp_Id = req.user.Emp_Id;
+  
+  //     const workbook = xlsx.read(req.file.buffer, { type: 'buffer' });
+  //     const sheetName = workbook.SheetNames[0]; // Get the first sheet
+  //     const sheet = workbook.Sheets[sheetName];
+  //     const data = xlsx.utils.sheet_to_json(sheet); // Convert the sheet to JSON format
+  
+  //     // Helper function to convert Excel time fractions to HH:mm format
+  //     const convertExcelTimeToTimeString = (excelTime: any) => {
+  //       if (typeof excelTime === 'number') {
+  //         const totalMinutes = Math.round(excelTime * 24 * 60); // Convert days fraction to total minutes
+  //         const hours = Math.floor(totalMinutes / 60);
+  //         const minutes = totalMinutes % 60;
+  //         return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+  //       }
+  //       return excelTime; // If it's not a number, return as it is
+  //     };
+  
+  //     // Iterate over each row in the Excel sheet and create tasks
+  //     const tasks = await Promise.all(data.map(async (row: any) => {
+  //       let {
+  //         Start_Time,
+  //         Task_Details,
+  //         End_Date,
+  //         End_Time,
+  //         Role_Id,
+  //         Assigned_Emp_Id,
+  //       } = row;
+  
+  //       // Convert Excel time fractions to proper time strings in HH:mm format
+  //       Start_Time = convertExcelTimeToTimeString(Start_Time);
+  //       End_Time = convertExcelTimeToTimeString(End_Time);
+  
+  //       return TaskDetails.create({
+  //         Emp_Id,
+  //         Project_Id,
+  //         Status: 'In Progress',
+  //         Start_Date: new Date(),
+  //         Start_Time,
+  //         Task_Details,
+  //         Actual_Start_Date: new Date(),
+  //         Actual_Start_Time:'',
+  //         End_Date,
+  //         End_Time,
+  //         Role_Id,
+  //         Assigned_Emp_Id,
+  //         Is_deleted: false,
+  //       });
+  //     }));
+  
+  //     return res.status(201).json({
+  //       message: 'Tasks imported successfully',
+  //       tasks,
+  //     });
+  //   } catch (error: any) {
+  //     console.error(error);
+  //     return res.status(500).json({
+  //       message: 'Error importing tasks',
+  //       error: error.message,
+  //     });
+  //   }
+  // });
+  
+
   Task.post('/importTasks/:Project_Id', authenticateTeamLead, upload.single('file'), async (req: any, res: Response) => {
     try {
-      // Check if a file is uploaded
       if (!req.file) {
         return res.status(400).json({ message: 'No file uploaded' });
       }
+  
       const { Project_Id } = req.params;
       const Emp_Id = req.user.Emp_Id;
   
       const workbook = xlsx.read(req.file.buffer, { type: 'buffer' });
-      const sheetName = workbook.SheetNames[0]; // Get the first sheet
+      const sheetName = workbook.SheetNames[0];
       const sheet = workbook.Sheets[sheetName];
-      const data = xlsx.utils.sheet_to_json(sheet); // Convert the sheet to JSON format
+      const data = xlsx.utils.sheet_to_json(sheet); 
   
-      // Helper function to convert Excel time fractions to HH:mm format
       const convertExcelTimeToTimeString = (excelTime: any) => {
         if (typeof excelTime === 'number') {
-          const totalMinutes = Math.round(excelTime * 24 * 60); // Convert days fraction to total minutes
+          const totalMinutes = Math.round(excelTime * 24 * 60); 
           const hours = Math.floor(totalMinutes / 60);
           const minutes = totalMinutes % 60;
           return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
         }
-        return excelTime; // If it's not a number, return as it is
+        return excelTime; 
       };
   
-      // Iterate over each row in the Excel sheet and create tasks
-      const tasks = await Promise.all(data.map(async (row: any) => {
-        let {
-          Start_Time,
-          Task_Details,
-          End_Date,
-          End_Time,
-          Role_Id,
-          Assigned_Emp_Id,
-        } = row;
+      const parseDate = (dateString: any) => {
+        const acceptedFormats = ['MM/dd/yyyy', 'yyyy-MM-dd','yyyy/MM/dd', 'dd/MM/yyyy', 'MM/dd/yy', 'dd/MM/yy'];
+        let parsedDate;
   
-        // Convert Excel time fractions to proper time strings in HH:mm format
-        Start_Time = convertExcelTimeToTimeString(Start_Time);
-        End_Time = convertExcelTimeToTimeString(End_Time);
+        for (const format of acceptedFormats) {
+          parsedDate = parse(dateString, format, new Date());
+          if (isValid(parsedDate)) {
+            return parsedDate;
+          }
+        }
+        throw new Error(`Invalid date format: ${dateString}`);
+      };
   
-        return TaskDetails.create({
-          Emp_Id,
-          Project_Id,
-          Status: 'In Progress',
-          Start_Date: new Date(),
-          Start_Time,
-          Task_Details,
-          Actual_Start_Date: new Date(),
-          Actual_Start_Time:'',
-          End_Date,
-          End_Time,
-          Role_Id,
-          Assigned_Emp_Id,
-          Is_deleted: false,
-        });
-      }));
+      const tasks = await Promise.all(
+        data.map(async (row: any) => {
+          try {
+            let { Start_Time, Task_Details, End_Date, End_Time, Role_Id, Assigned_Emp_Id } = row;
+  
+            Start_Time = convertExcelTimeToTimeString(Start_Time);
+            End_Time = convertExcelTimeToTimeString(End_Time);
+            End_Date = parseDate(End_Date);
+  
+            return TaskDetails.create({
+              Emp_Id,
+              Project_Id,
+              Status: 'In Progress',
+              Start_Date: new Date(),
+              Start_Time,
+              Task_Details,
+              Actual_Start_Date: new Date(),
+              Actual_Start_Time: '',
+              End_Date,
+              End_Time,
+              Role_Id,
+              Assigned_Emp_Id,
+              Is_deleted: false,
+            });
+          } catch (rowError: unknown) {
+            if (rowError instanceof Error) {
+              console.error(`Error processing row: ${rowError.message}`);
+              throw rowError;
+            } else {
+              console.error(`Unexpected error processing row`);
+              throw new Error('Unexpected error processing row');
+            }
+          }
+        })
+      );
   
       return res.status(201).json({
         message: 'Tasks imported successfully',
         tasks,
       });
-    } catch (error: any) {
-      console.error(error);
-      return res.status(500).json({
-        message: 'Error importing tasks',
-        error: error.message,
-      });
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        console.error(error);
+        return res.status(500).json({
+          message: 'Error importing tasks',
+          error: error.message,
+        });
+      } else {
+        console.error('Unexpected error');
+        return res.status(500).json({
+          message: 'Unexpected error',
+        });
+      }
     }
   });
   
-
 // Task.get("/task-details/:id",authenticateTeamLead, async (req: Request, res: Response) => {
 //     const { id } = req.params;
   
