@@ -123,10 +123,10 @@ EmploySideRoute.get("/CompletedTask",authenticateMember, async (req: any, res: a
 
   //update
 
-  EmploySideRoute.put('/UpdateTask/:Task_details_Id',authenticateMember, async (req, res) => {
+  EmploySideRoute.put('/UpdateTask/:Task_details_Id', authenticateMember, async (req, res) => {
     try {
         const { Task_details_Id } = req.params;
-        const { Status, Remarks } = req.body;
+        const { Status, Remarks, Actual_Start_Date, Actual_Start_Time } = req.body;
 
         // Find the task by Task_details_Id
         const task = await TaskDetails.findOne({
@@ -142,12 +142,23 @@ EmploySideRoute.get("/CompletedTask",authenticateMember, async (req: any, res: a
         // Prepare update payload
         let updatePayload: any = { Status };
 
+        // Handle Actual_Start_Date and Actual_Start_Time
+        if (Actual_Start_Date && Actual_Start_Time) {
+            // If both are provided, use them to update the task
+            updatePayload.Actual_Start_Date = Actual_Start_Date;
+            updatePayload.Actual_Start_Time = Actual_Start_Time;
+        } else {
+            // If either is missing, use Start_Date and Start_Time
+            updatePayload.Actual_Start_Date = task.Start_Date; // Fallback to Start_Date
+            updatePayload.Actual_Start_Time = task.Start_Time; // Fallback to Start_Time
+        }
+
         // Check if Status is 'Completed' and Remarks is not empty
         if (Status === 'Completed' && Remarks) {
             // Get current date and time
             const currentDate = new Date();
             const currentTimeString = currentDate.toTimeString().split(' ')[0].slice(0, 5); // Format as HH:mm
-
+          
             // Add Extend_End_Date and Extend_End_Time to update payload
             updatePayload.Extend_End_Date = currentDate; // Set the current date
             updatePayload.Extend_End_Time = currentTimeString; // Set the current time
@@ -174,6 +185,7 @@ EmploySideRoute.get("/CompletedTask",authenticateMember, async (req: any, res: a
         });
     }
 });
+
 
 
 export default EmploySideRoute
