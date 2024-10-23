@@ -247,12 +247,27 @@ Task.post('/importTasks/:Project_Id', autherticateTeamLead_1.authenticateTeamLea
             }
             throw new Error(`Invalid date format: ${dateString}`);
         };
+        const formatDateWithTimezone = (date, timeString) => {
+            // Set the default time
+            const [hours, minutes, seconds] = timeString.split(':');
+            // Set the hours, minutes, and seconds on the date
+            date.setHours(parseInt(hours), parseInt(minutes), parseInt(seconds.split('.')[0]), parseInt(seconds.split('.')[1]));
+            // Format the date in YYYY-MM-DD HH:mm:ss.SSS±hh format
+            const offset = date.getTimezoneOffset();
+            const offsetHours = String(Math.abs(Math.floor(offset / 60))).padStart(2, '0');
+            const offsetMinutes = String(Math.abs(offset % 60)).padStart(2, '0');
+            const offsetSign = offset <= 0 ? '+' : '-';
+            const formattedDate = date.toISOString().replace('Z', ''); // Remove 'Z' from UTC format
+            return `${formattedDate.replace('T', ' ').substring(0, 23)}${offsetSign}${offsetHours}:${offsetMinutes}`;
+        };
         const tasks = yield Promise.all(data.map((row) => __awaiter(void 0, void 0, void 0, function* () {
             try {
                 let { Start_Time, Task_Details, End_Date, End_Time, Role_Id, Assigned_Emp_Id } = row;
                 Start_Time = convertExcelTimeToTimeString(Start_Time);
                 End_Time = convertExcelTimeToTimeString(End_Time);
                 End_Date = parseDate(End_Date);
+                const formattedEndDateString = formatDateWithTimezone(End_Date, '07:10:58.017'); // Get the formatted string
+                const formattedEndDate = new Date(formattedEndDateString); // Convert to Date object
                 return Tbl_TaskDetails_1.default.create({
                     Emp_Id,
                     Project_Id,
@@ -262,7 +277,7 @@ Task.post('/importTasks/:Project_Id', autherticateTeamLead_1.authenticateTeamLea
                     Task_Details,
                     Actual_Start_Date: new Date(),
                     Actual_Start_Time: '',
-                    End_Date,
+                    End_Date: formattedEndDate,
                     End_Time,
                     Role_Id,
                     Assigned_Emp_Id,
