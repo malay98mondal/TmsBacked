@@ -52,28 +52,26 @@ projectEmployeeRoutes.post('/:projectId', async (req: any, res: any) => {
             });
         }
 
-        // Check if the designation requires a team lead
+        // Check if the employee is already a team lead in any project
         if (Role_Id === 2) { // Check for Team_Lead role
-            // Check if there's already a team lead for the specified designation
             const existingTeamLead = await ProjectEmployee.findOne({
                 where: {
-                    Project_Id: projectIdNumber,
-                    Degesination: Degesination,
+                    Emp_Id: Emp_Id,
                     Role_Id: 2, // Check specifically for team lead role
                     Is_deleted: false
                 },
             });
 
             if (existingTeamLead) {
-                // If a team lead already exists for this designation, return an error
+                // If a team lead already exists for this employee, return an error
                 return res.status(409).json({
                     success: false,
-                    message: `A team lead for the designation "${Degesination}" already exists in this project.`,
+                    message: `Employee is already a team lead in another project.`,
                 });
             }
         }
 
-        // If the ProjectEmployee does not exist, create a new record
+        // Create a new ProjectEmployee record
         const newProjectEmployee = await ProjectEmployee.create({
             Project_Id: projectIdNumber,
             Emp_Id, // Use Emp_Id from request body
@@ -82,11 +80,14 @@ projectEmployeeRoutes.post('/:projectId', async (req: any, res: any) => {
             Is_deleted: false,
         });
 
-        // Update the employee's role
-        await Employee.update(
-            { Role_Id }, // Set new Role_Id from request body
-            { where: { Emp_Id } } // Find employee by Emp_Id
-        );
+        // Update the employee's role only if they are being added as a team lead
+        if (Role_Id === 2) {
+            // Update the employee's role only if they are being assigned as a team lead
+            await Employee.update(
+                { Role_Id }, // Set new Role_Id from request body
+                { where: { Emp_Id } } // Find employee by Emp_Id
+            );
+        }
 
         return res.status(201).json({
             success: true,
@@ -101,6 +102,9 @@ projectEmployeeRoutes.post('/:projectId', async (req: any, res: any) => {
         });
     }
 });
+
+
+
 
 
 
