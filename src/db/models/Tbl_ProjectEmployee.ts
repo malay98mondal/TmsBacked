@@ -28,6 +28,7 @@ class ProjectEmployee extends Model<ProjectEmployeeAttributes, ProjectEmployeeIn
   public Is_deleted!: boolean;
     Employee: any;
     Project: any;
+  Role: any;
 }
 
 ProjectEmployee.init(
