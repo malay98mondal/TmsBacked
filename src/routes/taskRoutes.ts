@@ -133,40 +133,53 @@ Task.post('/CreateTask',authenticateTeamLead, async (req:any, res:any) => {
   });
 
 
-  Task.get("/project-employees/:projectId/exclude",authenticateTeamLead, async (req: any, res: any) => {
+  Task.get("/project-employees/:projectId/exclude", authenticateTeamLead, async (req: any, res: any) => {
     const { projectId } = req.params;
     const employeeId = req.user.Emp_Id;
+    const { search = '', limit = 10, offset = 0 } = req.query; // Get search term, limit, and offset from query parameters
 
     try {
-      const projectEmployees = await ProjectEmployee.findAll({
-        where: {
-          Project_Id: projectId,
-          Emp_Id: { [Op.ne]: employeeId }, 
-          Is_deleted: false,
-        },
-        include: [
-          {
-            model: Employee,
-            required: true,
-            attributes: ['Emp_Id', 'Employee_name'], // Ensure this matches the model
-          },
-          {
-            model: Project,
-            required: true,
-          },
-        ],
-        logging: console.log, // Log the generated SQL query
-      });
+        const projectEmployees = await ProjectEmployee.findAll({
+            where: {
+                Project_Id: projectId,
+                Emp_Id: { [Op.ne]: employeeId }, 
+                Is_deleted: false,
+                [Op.or]: [ // Allow search in multiple fields
+                    {
+                        // Search in Degesination (Job Title) field
+                        Degesination: { [Op.iLike]: `%${search}%` } // PostgreSQL case-insensitive search
+                    },
+                    {
+                        // If you want to include search by employee name, use a join
+                        '$Employee.Employee_name$': { [Op.iLike]: `%${search}%` } // Search in related Employee's name
+                    }
+                ]
+            },
+            include: [
+                {
+                    model: Employee,
+                    required: true,
+                    attributes: ['Emp_Id', 'Employee_name'], // Ensure this matches the model
+                },
+                {
+                    model: Project,
+                    required: true,
+                },
+            ],
+            limit: parseInt(limit as string), // Limit results
+            offset: parseInt(offset as string), // Pagination offset
+            logging: console.log, // Log the generated SQL query
+        });
   
-      // Log the results to verify data before sending response
-      console.log(JSON.stringify(projectEmployees, null, 2));
+        // Log the results to verify data before sending response
+        console.log(JSON.stringify(projectEmployees, null, 2));
   
-      res.status(200).json(projectEmployees);
+        res.status(200).json(projectEmployees);
     } catch (error) {
-      console.error("Error fetching project employees:", error);
-      res.status(500).json({ message: "An error occurred while fetching project employees." });
+        console.error("Error fetching project employees:", error);
+        res.status(500).json({ message: "An error occurred while fetching project employees." });
     }
-  }); 
+});
   
   // Task.post('/importTasks/:Project_Id', authenticateTeamLead, upload.single('file'), async (req: any, res: Response) => {
   //   try {
@@ -462,6 +475,53 @@ Task.get("/task-details/:id", authenticateTeamLead, async (req: Request, res: Re
       return res.status(500).json({ message: "An error occurred while fetching the task details" });
   }
 });  
+
+//
+Task.patch('/UpdateTask/:taskId', authenticateTeamLead, async (req: any, res: any) => {
+  const { taskId } = req.params; // Get the task ID from the route parameters
+  const Emp_Id = req.user.Emp_Id; // Get employee ID from the authenticated user
+
+  try {
+    const {
+      Start_Time,
+      Start_Date,
+      Task_Details,
+      End_Date,
+      End_Time,
+      Assigned_Emp_Id,
+    } = req.body; // Destructure the fields from the request body
+
+    // Find the task by its ID
+    const task = await TaskDetails.findOne({ where: { Task_details_Id: taskId, Emp_Id } });
+
+    if (!task) {
+      return res.status(404).json({ message: 'Task not found or not authorized' });
+    }
+
+    // Update the task with the new data, if it exists
+    const updatedTask = await task.update({
+      Start_Time: Start_Time || task.Start_Time,
+      Start_Date: Start_Date || task.Start_Date,
+      Task_Details: Task_Details || task.Task_Details,
+      End_Date: End_Date || task.End_Date,
+      End_Time: End_Time || task.End_Time,
+      Assigned_Emp_Id: Assigned_Emp_Id || task.Assigned_Emp_Id,
+    });
+
+    return res.status(200).json({
+      message: 'Task updated successfully',
+      task: updatedTask,
+    });
+  } catch (error: any) {
+    console.error(error);
+    return res.status(500).json({
+      message: 'Error updating task',
+      error: error.message,
+    });
+  }
+});
+
+
   
 export default Task;
 
