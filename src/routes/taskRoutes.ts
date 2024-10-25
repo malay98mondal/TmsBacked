@@ -16,11 +16,80 @@ const Task = Router();
 const storage = multer.memoryStorage(); // Store files in memory
 const upload = multer({ storage });
 
-Task.get('/tasks',authenticateTeamLead, async (req: any, res: any) => {
-  // const empId = parseInt(req.params.empId);
-  const empId = req.user.Emp_Id;
+// Task.get('/tasks',authenticateTeamLead, async (req: any, res: any) => {
+//   // const empId = parseInt(req.params.empId);
+//   const empId = req.user.Emp_Id;
 
-  const { search = '', page = 1, limit = 5 } = req.query; // Get search query, page, and limit from request query
+//   const { search = '', page = 1, limit = 5 } = req.query; // Get search query, page, and limit from request query
+//   const offset = (parseInt(page as string) - 1) * parseInt(limit as string);
+
+//   try {
+//     // Find projects associated with the employee
+//     const projects = await ProjectEmployee.findAll({
+//       where: { Emp_Id: empId, Is_deleted: false },
+//       include: [{ model: Project }],
+//     });
+
+//     if (projects.length === 0) {
+//       return res.status(404).json({ message: 'No projects found for this employee.' });
+//     }
+
+//     const projectId = projects[0].Project_Id;
+//     const projectName = projects[0].Project?.Project_Name;
+
+//     // Find tasks associated with the project, applying search and pagination
+//     const tasks = await TaskDetails.findAndCountAll({
+//       where: {
+//         Project_Id: projectId,
+//         Is_deleted: false,
+//         [Op.or]: [
+//           {
+//             Task_Details: {
+//               [Op.iLike]: `%${search}%`, // Case-insensitive search in Task_Details
+//             },
+//           },
+//           {
+//             '$Employee.Employee_name$': {
+//               [Op.iLike]: `%${search}%`, // Case-insensitive search in Employee_name
+//             },
+//           },
+//         ],
+//       },
+//       offset, // Apply pagination offset
+//       limit: parseInt(limit as string), // Apply pagination limit
+//       include: [
+//         {
+//           model: Employee, // Include the Employee model
+//           attributes: ['Emp_Id', 'Employee_name'], // Specify attributes you want from Employee
+//         },
+//       ],
+//     });
+
+//     // Map through tasks to include employee id and name in each task
+//     const tasksWithEmployeeInfo = tasks.rows.map((task) => ({
+//       ...task.toJSON(),
+//       employeeId: task.Employee?.Emp_Id, // Get employee ID from the included Employee model
+//       employeeName: task.Employee?.Employee_name, // Get employee name from the included Employee model
+//     }));
+
+//     // Return paginated data with total count for frontend pagination
+//     return res.status(200).json({
+//       projectId,
+//       projectName,
+//       tasks: tasksWithEmployeeInfo,
+//       total: tasks.count, // Total number of matching tasks
+//       page: parseInt(page as string),
+//       limit: parseInt(limit as string),
+//     });
+//   } catch (error) {
+//     console.error(error);
+//     return res.status(500).json({ message: 'An error occurred while fetching tasks.' });
+//   }
+// });
+
+Task.get('/tasks', authenticateTeamLead, async (req: any, res: any) => {
+  const empId = req.user.Emp_Id;
+  const { search = '', page = 1, limit = 5, status, priority, dueDate, sortOrder = 'DESC' } = req.query; // Default to descending order (latest first)
   const offset = (parseInt(page as string) - 1) * parseInt(limit as string);
 
   try {
@@ -37,26 +106,45 @@ Task.get('/tasks',authenticateTeamLead, async (req: any, res: any) => {
     const projectId = projects[0].Project_Id;
     const projectName = projects[0].Project?.Project_Name;
 
-    // Find tasks associated with the project, applying search and pagination
+    // Create a filter object for tasks based on query parameters
+    const taskFilters: any = {
+      Project_Id: projectId,
+      Is_deleted: false,
+      [Op.or]: [
+        {
+          Task_Details: {
+            [Op.iLike]: `%${search}%`, // Case-insensitive search in Task_Details
+          },
+        },
+        {
+          '$Employee.Employee_name$': {
+            [Op.iLike]: `%${search}%`, // Case-insensitive search in Employee_name
+          },
+        },
+      ],
+    };
+
+    // Apply additional filters if provided
+    if (status) {
+      taskFilters.Status = status; // Filter by task status
+    }
+
+    if (priority) {
+      taskFilters.Priority = priority; // Filter by task priority
+    }
+
+    if (dueDate) {
+      taskFilters.Due_Date = {
+        [Op.lte]: new Date(dueDate), // Filter tasks due on or before the specified date
+      };
+    }
+
+    // Find tasks associated with the project, applying search, filters, and pagination
     const tasks = await TaskDetails.findAndCountAll({
-      where: {
-        Project_Id: projectId,
-        Is_deleted: false,
-        [Op.or]: [
-          {
-            Task_Details: {
-              [Op.iLike]: `%${search}%`, // Case-insensitive search in Task_Details
-            },
-          },
-          {
-            '$Employee.Employee_name$': {
-              [Op.iLike]: `%${search}%`, // Case-insensitive search in Employee_name
-            },
-          },
-        ],
-      },
+      where: taskFilters,
       offset, // Apply pagination offset
       limit: parseInt(limit as string), // Apply pagination limit
+      order: [['createdAt', sortOrder]], // Sort by latest date (createdAt or updatedAt) in descending or ascending order
       include: [
         {
           model: Employee, // Include the Employee model
@@ -86,7 +174,6 @@ Task.get('/tasks',authenticateTeamLead, async (req: any, res: any) => {
     return res.status(500).json({ message: 'An error occurred while fetching tasks.' });
   }
 });
-
 
 
 Task.post('/CreateTask',authenticateTeamLead, async (req:any, res:any) => {
@@ -412,67 +499,186 @@ Task.post('/CreateTask',authenticateTeamLead, async (req:any, res:any) => {
 //     }
 //   });
   
-Task.get("/task-details/:id", authenticateTeamLead, async (req: Request, res: Response) => {
-  const { id } = req.params;
+// Define the GET API to retrieve all employees for a specific project
 
+// Define the GET API to retrieve employee details based on Project_Id
+// Define the GET API to retrieve employee details based on authenticated employee and Role_Id = 2
+// Define the GET API to retrieve employee details with role information
+Task.get('/project-employees', authenticateTeamLead, async (req: any, res: any) => {
   try {
-      // Step 1: Fetch the task details from TaskDetails table
-      const taskDetails = await TaskDetails.findOne({
-          where: { Task_details_Id: id, Is_deleted: false }, // Only fetch if not deleted
-      });
+    const empId = req.user.Emp_Id; // Get the Emp_Id from authenticated user
 
-      if (!taskDetails) {
-          return res.status(404).json({ message: "Task not found" });
-      }
+    if (!empId) {
+      return res.status(400).json({ message: 'Employee ID not found in the request.' });
+    }
 
-      // Step 2: Extract Assigned_Emp_Id from TaskDetails
-      const { Assigned_Emp_Id, Project_Id } = taskDetails;
+    // Step 1: Find the project where this employee has Role_Id = 2
+    const projectEmployee = await ProjectEmployee.findOne({
+      where: { Emp_Id: empId, Role_Id: 2, Is_deleted: false },
+      attributes: ['Project_Id'], // Fetch Project_Id
+    });
 
-      // Step 3: Fetch Employee details, which includes Role_Id
-      const employee = await Employee.findOne({
-          where: { Emp_Id: Assigned_Emp_Id }, // Find employee by Emp_Id
-          attributes: ['Emp_Id', 'Employee_name', 'Role_Id'], // Include Role_Id
-      });
+    if (!projectEmployee) {
+      return res.status(404).json({ message: 'No project found for this employee with Role_Id = 2.' });
+    }
 
-      if (!employee) {
-          return res.status(404).json({ message: "Employee not found" });
-      }
+    const projectId = projectEmployee.Project_Id;
 
-      // Step 4: Fetch Role details using Role_Id from Tbl_Employee
-      const { Role_Id } = employee;
-      const role = await Role.findOne({
-          where: { Role_Id }, // Find role by Role_Id
-          attributes: ['Role_Id', 'Name'], // Specify the fields to retrieve
-      });
+    // Step 2: Fetch all employees for this project
+    const projectEmployees = await ProjectEmployee.findAll({
+      where: { Project_Id: projectId, Is_deleted: false },
+      attributes: ['Emp_Id', 'Degesination', 'Role_Id'], // Fetch Emp_Id, Degesination, and Role_Id
+    });
 
-      if (!role) {
-          return res.status(404).json({ message: "Role not found" });
-      }
+    if (projectEmployees.length === 0) {
+      return res.status(404).json({ message: 'No employees found for this project.' });
+    }
 
-      // Step 5: Fetch Project details using Project_Id
-      const project = await Project.findOne({
-          where: { Project_Id }, // Find project by Project_Id
-          attributes: ['Project_Name'], // Specify the fields to retrieve
-      });
+    // Step 3: Get Employee names and Role names from Employee and Role table
+    const employeeDetails = await Promise.all(
+      projectEmployees.map(async (projectEmployee) => {
+        // Fetch Employee name from Employee table
+        const employee = await Employee.findOne({
+          where: { Emp_Id: projectEmployee.Emp_Id, Is_deleted: false },
+          attributes: ['Emp_Id', 'Employee_name'], // Fetch Emp_Id and Employee_name
+        });
 
-      // Combine the results
-      const result = {
-          taskDetails,
-          employee: {
-              Emp_Id: employee.Emp_Id,
-              Employee_name: employee.Employee_name,
-          },
-          role: {
-              Role_Id: role.Role_Id,
-              Name: role.Name,
-          },
-          project: project ? { Project_Name: project.Project_Name } : null
-      };
+        // Fetch Role name from Role table
+        const role = await Role.findOne({
+          where: { Role_Id: projectEmployee.Role_Id, Is_deleted: false },
+          attributes: ['Role_Id', 'Name'], // Fetch Role_Id and Role Name
+        });
 
-      return res.status(200).json(result);
+        return {
+          empId: employee?.Emp_Id || projectEmployee.Emp_Id, // In case employee is not found
+          employeeName: employee?.Employee_name || 'Unknown', // In case employee is not found
+          designation: projectEmployee.Degesination,
+          roleName: role?.Name || 'Unknown', // In case role is not found
+        };
+      })
+    );
+
+    // Step 4: Return the employee details with role name
+    return res.status(200).json({
+      projectId,
+      employees: employeeDetails,
+    });
   } catch (error) {
-      console.error("Error fetching task details:", error);
-      return res.status(500).json({ message: "An error occurred while fetching the task details" });
+    console.error('Error fetching employee data:', error); // Log the error
+    return res.status(500).json({ message: 'An error occurred while fetching employee data.' });
+  }
+});
+
+
+
+// get own task of teamLead
+
+// Define the GET API to retrieve tasks for the authenticated employee where Role_Id = 2
+// Define the GET API to retrieve project names and task details for the authenticated employee
+Task.get('/team-lead-tasks', authenticateTeamLead, async (req: any, res: any) => {
+  try {
+    const assignedEmpId = req.user.Emp_Id; // Get the Emp_Id from the authenticated user
+
+    if (!assignedEmpId) {
+      return res.status(400).json({ message: 'Assigned employee ID not found in request.' });
+    }
+
+    // Step 1: Find unique project IDs and task details for tasks assigned to this employee
+    const assignedTasks = await TaskDetails.findAll({
+      where: {
+        Assigned_Emp_Id: assignedEmpId, // Use Assigned_Emp_Id to match authenticated user ID
+        Is_deleted: false, // Filter out deleted tasks
+      },
+      attributes: [
+        'Task_details_Id', // Corrected field: Task ID
+        'Task_Details', // Corrected field: Task Details
+        'Emp_Id',
+        'Project_Id',
+        'Status',
+        'Start_Date',
+        'Start_Time',
+        'End_Date',
+        'End_Time',
+        'Extend_Start_Date',
+        'Extend_Start_Time',
+        'Extend_End_Time',
+        'Remarks',
+        'Role_Id',
+        'Assigned_Emp_Id',
+        'Actual_Start_Date',
+        'Actual_Start_Time',
+        'Project_Id',    // Corrected field: Project ID
+      ],
+    });
+
+    if (!assignedTasks.length) {
+      return res.status(404).json({ message: 'No tasks found for this team leader.' });
+    }
+
+    // Step 2: Extract unique project IDs from assigned tasks
+    const projectIds = [...new Set(assignedTasks.map(task => task.Project_Id))]; // Corrected field: Project ID
+
+    // Step 3: Get project names using the unique project IDs
+    const projects = await Project.findAll({
+      where: {
+        Project_Id: projectIds, // Corrected field: Project ID
+        Is_deleted: false,      // Filter out deleted projects
+      },
+      attributes: [
+        'Project_Id', // Corrected field: Project ID
+        'Project_Name', // Corrected field: Project Name
+      ],
+    });
+
+    // Step 4: Format the response to include project names and corresponding task details
+    const projectTasks = projects.map(project => {
+      // Filter tasks that match this project ID
+      const tasks = assignedTasks
+        .filter(task => task.Project_Id === project.Project_Id) // Corrected field: Project ID
+        .map(task => ({
+          Task_details_Id: task.Task_details_Id, // Corrected field: Task ID
+          taskDetails: task.Task_Details, // Corrected field: Task Details
+          Emp_Id:task.Emp_Id,
+          Project_Id:task.Project_Id,
+          Status: task.Status,
+          Start_Date: task.Start_Date,
+          Start_Time: task.Start_Time,
+          End_Date: task.End_Date,
+          End_Time:task.End_Time,
+          Extend_Start_Date: task.Extend_Start_Date,
+          Extend_Start_Time: task.Extend_Start_Time,
+          Extend_End_Time: task.Extend_End_Time,
+          Remarks: task.Remarks,
+          Role_Id: task.Role_Id,
+          Assigned_Emp_Id: task.Assigned_Emp_Id,
+          Actual_Start_Date: task.Actual_Start_Date,
+          Actual_Start_Time: task.Actual_Start_Time,
+          //Project_Id: task.Project_Id,
+
+
+
+
+
+
+
+
+
+          
+          
+
+        }));
+
+      return {
+        projectId: project.Project_Id, // Corrected field: Project ID
+        projectName: project.Project_Name, // Corrected field: Project Name
+        tasks, // Include task details associated with this project
+      };
+    });
+
+    return res.status(200).json({ projectTasks });
+  } catch (error) {
+    console.error('Error fetching projects and tasks for team lead:', error);
+    return res.status(500).json({ message: 'An error occurred while fetching projects and tasks.'});
   }
 });  
 
@@ -524,7 +730,5 @@ Task.patch('/UpdateTask/:taskId', authenticateTeamLead, async (req: any, res: an
 
   
 export default Task;
-
-
 
 
