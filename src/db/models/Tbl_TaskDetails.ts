@@ -4,6 +4,7 @@ import Employee from "./Tbl_Employee";
 import Task from "./Tbl_Task";
 import Role from "./Tbl_Role";
 import sequelizeConnection from "../config";
+import Project from "./Tbl_Project";
 
 interface TaskDetailsAttributes {
   Task_details_Id: number;
@@ -57,6 +58,7 @@ class TaskDetails extends Model<TaskDetailsAttributes, TaskDetailsInput> impleme
   public Assigned_Emp_Id!: number;
   public Is_deleted!: boolean;
   Employee: any;
+  Project: any;
 }
 
 TaskDetails.init(
@@ -146,7 +148,7 @@ TaskDetails.init(
     timestamps: true,
   }
 );
-
+TaskDetails.belongsTo(Project, { foreignKey: 'Project_Id' });
 TaskDetails.belongsTo(Employee, { foreignKey: 'Assigned_Emp_Id' });
 
 

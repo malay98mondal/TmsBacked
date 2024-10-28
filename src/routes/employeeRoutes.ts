@@ -10,19 +10,47 @@ const employeeRoutes = express.Router();
 employeeRoutes.get('/GetEmployee', authenticateManager, async (req: any, res: any) => {
     try {
         const userIdToExclude = req.user.Emp_Id;
+        const page = parseInt(req.query.page) || 1; // Get the page number from query params, default to 1
+        const pageSize = 10; // Number of employees to return per page (can be adjusted)
+        const searchTerm = req.query.searchTerm ? req.query.searchTerm : ''; // Get search term from query params
 
-        const employees = await Employee.findAll({
+        // Calculate offset for pagination
+        const offset = (page - 1) * pageSize;
+
+        const employees = await Employee.findAndCountAll({
             where: {
                 Is_deleted: false,
                 Emp_Id: {
                     [Op.ne]: userIdToExclude,  // Exclude the employee with the id from the token
                 },
-            },  
+                // Add search filter for employee name (or other fields as necessary)
+                [Op.or]: [
+                    {
+                        Employee_name: {
+                            [Op.iLike]: `%${searchTerm}%`, // Case insensitive search
+                        },
+                    },
+                    // You can add more fields here if necessary
+                    // {
+                    //     AnotherField: {
+                    //         [Op.iLike]: `%${searchTerm}%`,
+                    //     },
+                    // },
+                ],
+            },
+            limit: pageSize,
+            offset: offset,
         });
+
+        // Calculate total pages
+        const totalPages = Math.ceil(employees.count / pageSize);
 
         return res.status(200).json({
             success: true,
-            data: employees,
+            data: employees.rows, // Return the paginated employees
+            totalPages: totalPages,
+            currentPage: page,
+            totalEmployees: employees.count,
         });
     } catch (error: any) {
         return res.status(500).json({
