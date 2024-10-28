@@ -749,6 +749,7 @@ Task.get("/assigned", authenticateTeamLead, async (req: any, res: any) => {
         Is_deleted: false,                 // Only fetch tasks that are not deleted
         [Op.or]: [
           { Task_Details: { [Op.iLike]: `%${search}%` } },  // Search in Task_Details
+          { Status: { [Op.iLike]: `%${search}%`}},
         ]
       },
       include: [
@@ -757,6 +758,7 @@ Task.get("/assigned", authenticateTeamLead, async (req: any, res: any) => {
           attributes: ['Project_Name'],  // Include only Project_Name from the Project model
           where: {
             Project_Name: { [Op.iLike]: `%${search}%` }, // Search in Project_Name
+            
           },
           required: false,  // Make the join optional (tasks without projects won't be excluded)
         }
