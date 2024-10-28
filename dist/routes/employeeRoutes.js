@@ -22,17 +22,43 @@ const employeeRoutes = express_1.default.Router();
 employeeRoutes.get('/GetEmployee', authenticateManager_1.authenticateManager, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const userIdToExclude = req.user.Emp_Id;
-        const employees = yield Tbl_Employee_1.default.findAll({
+        const page = parseInt(req.query.page) || 1; // Get the page number from query params, default to 1
+        const pageSize = 10; // Number of employees to return per page (can be adjusted)
+        const searchTerm = req.query.searchTerm ? req.query.searchTerm : ''; // Get search term from query params
+        // Calculate offset for pagination
+        const offset = (page - 1) * pageSize;
+        const employees = yield Tbl_Employee_1.default.findAndCountAll({
             where: {
                 Is_deleted: false,
                 Emp_Id: {
                     [sequelize_1.Op.ne]: userIdToExclude, // Exclude the employee with the id from the token
                 },
+                // Add search filter for employee name (or other fields as necessary)
+                [sequelize_1.Op.or]: [
+                    {
+                        Employee_name: {
+                            [sequelize_1.Op.iLike]: `%${searchTerm}%`, // Case insensitive search
+                        },
+                    },
+                    // You can add more fields here if necessary
+                    // {
+                    //     AnotherField: {
+                    //         [Op.iLike]: `%${searchTerm}%`,
+                    //     },
+                    // },
+                ],
             },
+            limit: pageSize,
+            offset: offset,
         });
+        // Calculate total pages
+        const totalPages = Math.ceil(employees.count / pageSize);
         return res.status(200).json({
             success: true,
-            data: employees,
+            data: employees.rows,
+            totalPages: totalPages,
+            currentPage: page,
+            totalEmployees: employees.count,
         });
     }
     catch (error) {
