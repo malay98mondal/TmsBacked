@@ -117,6 +117,12 @@ Task.get('/tasks', authenticateTeamLead, async (req: any, res: any) => {
           },
         },
         {
+          Status: {
+            [Op.iLike]: `%${search}%`, // Case-insensitive search in Task_Details
+
+          },
+        },
+        {
           '$Employee.Employee_name$': {
             [Op.iLike]: `%${search}%`, // Case-insensitive search in Employee_name
           },
@@ -229,6 +235,7 @@ Task.post('/CreateTask',authenticateTeamLead, async (req:any, res:any) => {
         const projectEmployees = await ProjectEmployee.findAll({
             where: {
                 Project_Id: projectId,
+                Emp_Id: { [Op.ne]: employeeId }, 
                 Is_deleted: false,
                 [Op.or]: [ // Allow search in multiple fields
                     {
@@ -653,6 +660,18 @@ Task.get('/team-lead-tasks', authenticateTeamLead, async (req: any, res: any) =>
           Actual_Start_Date: task.Actual_Start_Date,
           Actual_Start_Time: task.Actual_Start_Time,
           //Project_Id: task.Project_Id,
+
+
+
+
+
+
+
+
+
+          
+          
+
         }));
 
       return {
@@ -711,113 +730,6 @@ Task.patch('/UpdateTask/:taskId', authenticateTeamLead, async (req: any, res: an
       message: 'Error updating task',
       error: error.message,
     });
-  }
-});
-Task.get("/assigned", authenticateTeamLead, async (req: any, res: any) => {
-  const Assigned_Emp_Id = req.user.Emp_Id;
-  const { page = 1, limit = 5, search = '' } = req.query;
-  const offset = (parseInt(page as string) - 1) * parseInt(limit as string);
-
-  try {
-    // Query the database to find all tasks assigned to the employee and exclude completed tasks
-    const { count, rows: taskDetails } = await TaskDetails.findAndCountAll({
-      where: {
-        Assigned_Emp_Id: Assigned_Emp_Id,  // Filter by Assigned_Emp_Id
-        Is_deleted: false,                 // Only fetch tasks that are not deleted
-        [Op.or]: [
-          { Task_Details: { [Op.iLike]: `%${search}%` } },  // Search in Task_Details
-        ]
-      },
-      include: [
-        {
-          model: Project,  // Join with Project model
-          attributes: ['Project_Name'],  // Include only Project_Name from the Project model
-          where: {
-            Project_Name: { [Op.iLike]: `%${search}%` }, // Search in Project_Name
-          },
-          required: false,  // Make the join optional (tasks without projects won't be excluded)
-        }
-      ],
-      limit: parseInt(limit as string),   // Set limit for pagination
-      offset: offset,                     // Set offset for pagination
-    });
-
-    // Check if tasks are found
-    return res.status(200).json({
-      total: count,                // Total count of matching tasks
-      page: parseInt(page as string),   
-      limit: parseInt(limit as string),   
-      tasks: taskDetails.map(task => ({
-        ...task.toJSON(),  // Convert the task instance to JSON
-      }))
-    });
-
-  } catch (error) {
-    console.error("Error fetching task details:", error);
-    return res.status(500).json({ message: "An error occurred while fetching task details." });
-  }
-});
-
-Task.put('/UpdateTask/:Task_details_Id', authenticateTeamLead, async (req, res) => {
-  try {
-      const { Task_details_Id } = req.params;
-      const { Status, Remarks, Actual_Start_Date, Actual_Start_Time } = req.body;
-
-      // Find the task by Task_details_Id
-      const task = await TaskDetails.findOne({
-          where: { Task_details_Id, Is_deleted: false } // Ensure that the task is not soft-deleted
-      });
-
-      if (!task) {
-          return res.status(404).json({
-              message: 'Task not found'
-          });
-      }
-
-      // Prepare update payload
-      let updatePayload: any = { Status };
-
-      // Handle Actual_Start_Date and Actual_Start_Time
-      if (Actual_Start_Date && Actual_Start_Time) {
-          // If both are provided, use them to update the task
-          updatePayload.Actual_Start_Date = Actual_Start_Date;
-          updatePayload.Actual_Start_Time = Actual_Start_Time;
-      } else {
-          // If either is missing, use Start_Date and Start_Time
-          updatePayload.Actual_Start_Date = task.Start_Date; // Fallback to Start_Date
-          updatePayload.Actual_Start_Time = task.Start_Time; // Fallback to Start_Time
-      }
-
-      // Check if Status is 'Completed' and Remarks is not empty
-      if (Status === 'Completed' && Remarks) {
-          // Get current date and time
-          const currentDate = new Date();
-          const currentTimeString = currentDate.toTimeString().split(' ')[0].slice(0, 5); // Format as HH:mm
-        
-          // Add Extend_End_Date and Extend_End_Time to update payload
-          updatePayload.Extend_End_Date = currentDate; // Set the current date
-          updatePayload.Extend_End_Time = currentTimeString; // Set the current time
-      }
-
-      // Always update Remarks if provided
-      if (Remarks) {
-          updatePayload.Remarks = Remarks;
-      }
-
-      // Update the task
-      const updatedTask = await task.update(updatePayload);
-
-      return res.status(200).json({
-          message: 'Task updated successfully',
-          task: updatedTask
-      });
-      
-  } catch (error) {
-      const errorMessage = (error as Error).message || 'Error updating task';
-      console.error(error);
-      return res.status(500).json({
-          message: errorMessage
-      });
   }
 });
 
