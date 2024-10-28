@@ -56,26 +56,24 @@ projectEmployeeRoutes.post('/:projectId', (req, res) => __awaiter(void 0, void 0
                 message: 'Employee is already assigned to this project.',
             });
         }
-        // Check if the designation requires a team lead
+        // Check if the employee is already a team lead in any project
         if (Role_Id === 2) { // Check for Team_Lead role
-            // Check if there's already a team lead for the specified designation
             const existingTeamLead = yield Tbl_ProjectEmployee_1.default.findOne({
                 where: {
-                    Project_Id: projectIdNumber,
-                    Degesination: Degesination,
+                    Emp_Id: Emp_Id,
                     Role_Id: 2,
                     Is_deleted: false
                 },
             });
             if (existingTeamLead) {
-                // If a team lead already exists for this designation, return an error
+                // If a team lead already exists for this employee, return an error
                 return res.status(409).json({
                     success: false,
-                    message: `A team lead for the designation "${Degesination}" already exists in this project.`,
+                    message: `Employee is already a team lead in another project.`,
                 });
             }
         }
-        // If the ProjectEmployee does not exist, create a new record
+        // Create a new ProjectEmployee record
         const newProjectEmployee = yield Tbl_ProjectEmployee_1.default.create({
             Project_Id: projectIdNumber,
             Emp_Id,
@@ -83,10 +81,13 @@ projectEmployeeRoutes.post('/:projectId', (req, res) => __awaiter(void 0, void 0
             Degesination,
             Is_deleted: false,
         });
-        // Update the employee's role
-        yield Tbl_Employee_1.default.update({ Role_Id }, // Set new Role_Id from request body
-        { where: { Emp_Id } } // Find employee by Emp_Id
-        );
+        // Update the employee's role only if they are being added as a team lead
+        if (Role_Id === 2) {
+            // Update the employee's role only if they are being assigned as a team lead
+            yield Tbl_Employee_1.default.update({ Role_Id }, // Set new Role_Id from request body
+            { where: { Emp_Id } } // Find employee by Emp_Id
+            );
+        }
         return res.status(201).json({
             success: true,
             message: 'Project employee created successfully.',

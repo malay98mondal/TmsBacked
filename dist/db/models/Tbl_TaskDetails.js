@@ -7,6 +7,7 @@ const sequelize_1 = require("sequelize");
 const Tbl_Employee_1 = __importDefault(require("./Tbl_Employee"));
 const Tbl_Role_1 = __importDefault(require("./Tbl_Role"));
 const config_1 = __importDefault(require("../config"));
+const Tbl_Project_1 = __importDefault(require("./Tbl_Project"));
 class TaskDetails extends sequelize_1.Model {
 }
 TaskDetails.init({
@@ -92,5 +93,6 @@ TaskDetails.init({
     tableName: "Tbl_TaskDetails",
     timestamps: true,
 });
+TaskDetails.belongsTo(Tbl_Project_1.default, { foreignKey: 'Project_Id' });
 TaskDetails.belongsTo(Tbl_Employee_1.default, { foreignKey: 'Assigned_Emp_Id' });
 exports.default = TaskDetails;

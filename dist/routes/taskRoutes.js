@@ -27,11 +27,73 @@ const Task = (0, express_1.Router)();
 // Multer configuration for file upload
 const storage = multer_1.default.memoryStorage(); // Store files in memory
 const upload = (0, multer_1.default)({ storage });
+// Task.get('/tasks',authenticateTeamLead, async (req: any, res: any) => {
+//   // const empId = parseInt(req.params.empId);
+//   const empId = req.user.Emp_Id;
+//   const { search = '', page = 1, limit = 5 } = req.query; // Get search query, page, and limit from request query
+//   const offset = (parseInt(page as string) - 1) * parseInt(limit as string);
+//   try {
+//     // Find projects associated with the employee
+//     const projects = await ProjectEmployee.findAll({
+//       where: { Emp_Id: empId, Is_deleted: false },
+//       include: [{ model: Project }],
+//     });
+//     if (projects.length === 0) {
+//       return res.status(404).json({ message: 'No projects found for this employee.' });
+//     }
+//     const projectId = projects[0].Project_Id;
+//     const projectName = projects[0].Project?.Project_Name;
+//     // Find tasks associated with the project, applying search and pagination
+//     const tasks = await TaskDetails.findAndCountAll({
+//       where: {
+//         Project_Id: projectId,
+//         Is_deleted: false,
+//         [Op.or]: [
+//           {
+//             Task_Details: {
+//               [Op.iLike]: `%${search}%`, // Case-insensitive search in Task_Details
+//             },
+//           },
+//           {
+//             '$Employee.Employee_name$': {
+//               [Op.iLike]: `%${search}%`, // Case-insensitive search in Employee_name
+//             },
+//           },
+//         ],
+//       },
+//       offset, // Apply pagination offset
+//       limit: parseInt(limit as string), // Apply pagination limit
+//       include: [
+//         {
+//           model: Employee, // Include the Employee model
+//           attributes: ['Emp_Id', 'Employee_name'], // Specify attributes you want from Employee
+//         },
+//       ],
+//     });
+//     // Map through tasks to include employee id and name in each task
+//     const tasksWithEmployeeInfo = tasks.rows.map((task) => ({
+//       ...task.toJSON(),
+//       employeeId: task.Employee?.Emp_Id, // Get employee ID from the included Employee model
+//       employeeName: task.Employee?.Employee_name, // Get employee name from the included Employee model
+//     }));
+//     // Return paginated data with total count for frontend pagination
+//     return res.status(200).json({
+//       projectId,
+//       projectName,
+//       tasks: tasksWithEmployeeInfo,
+//       total: tasks.count, // Total number of matching tasks
+//       page: parseInt(page as string),
+//       limit: parseInt(limit as string),
+//     });
+//   } catch (error) {
+//     console.error(error);
+//     return res.status(500).json({ message: 'An error occurred while fetching tasks.' });
+//   }
+// });
 Task.get('/tasks', autherticateTeamLead_1.authenticateTeamLead, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
-    // const empId = parseInt(req.params.empId);
     const empId = req.user.Emp_Id;
-    const { search = '', page = 1, limit = 5 } = req.query; // Get search query, page, and limit from request query
+    const { search = '', page = 1, limit = 5, status, priority, dueDate, sortOrder = 'DESC' } = req.query; // Default to descending order (latest first)
     const offset = (parseInt(page) - 1) * parseInt(limit);
     try {
         // Find projects associated with the employee
@@ -44,26 +106,41 @@ Task.get('/tasks', autherticateTeamLead_1.authenticateTeamLead, (req, res) => __
         }
         const projectId = projects[0].Project_Id;
         const projectName = (_a = projects[0].Project) === null || _a === void 0 ? void 0 : _a.Project_Name;
-        // Find tasks associated with the project, applying search and pagination
+        // Create a filter object for tasks based on query parameters
+        const taskFilters = {
+            Project_Id: projectId,
+            Is_deleted: false,
+            [sequelize_1.Op.or]: [
+                {
+                    Task_Details: {
+                        [sequelize_1.Op.iLike]: `%${search}%`, // Case-insensitive search in Task_Details
+                    },
+                },
+                {
+                    '$Employee.Employee_name$': {
+                        [sequelize_1.Op.iLike]: `%${search}%`, // Case-insensitive search in Employee_name
+                    },
+                },
+            ],
+        };
+        // Apply additional filters if provided
+        if (status) {
+            taskFilters.Status = status; // Filter by task status
+        }
+        if (priority) {
+            taskFilters.Priority = priority; // Filter by task priority
+        }
+        if (dueDate) {
+            taskFilters.Due_Date = {
+                [sequelize_1.Op.lte]: new Date(dueDate), // Filter tasks due on or before the specified date
+            };
+        }
+        // Find tasks associated with the project, applying search, filters, and pagination
         const tasks = yield Tbl_TaskDetails_1.default.findAndCountAll({
-            where: {
-                Project_Id: projectId,
-                Is_deleted: false,
-                [sequelize_1.Op.or]: [
-                    {
-                        Task_Details: {
-                            [sequelize_1.Op.iLike]: `%${search}%`, // Case-insensitive search in Task_Details
-                        },
-                    },
-                    {
-                        '$Employee.Employee_name$': {
-                            [sequelize_1.Op.iLike]: `%${search}%`, // Case-insensitive search in Employee_name
-                        },
-                    },
-                ],
-            },
+            where: taskFilters,
             offset,
             limit: parseInt(limit),
+            order: [['createdAt', sortOrder]],
             include: [
                 {
                     model: Tbl_Employee_1.default,
@@ -124,12 +201,22 @@ Task.post('/CreateTask', autherticateTeamLead_1.authenticateTeamLead, (req, res)
 Task.get("/project-employees/:projectId/exclude", autherticateTeamLead_1.authenticateTeamLead, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { projectId } = req.params;
     const employeeId = req.user.Emp_Id;
+    const { search = '', limit = 10, offset = 0 } = req.query; // Get search term, limit, and offset from query parameters
     try {
         const projectEmployees = yield Tbl_ProjectEmployee_1.default.findAll({
             where: {
                 Project_Id: projectId,
-                Emp_Id: { [sequelize_1.Op.ne]: employeeId },
                 Is_deleted: false,
+                [sequelize_1.Op.or]: [
+                    {
+                        // Search in Degesination (Job Title) field
+                        Degesination: { [sequelize_1.Op.iLike]: `%${search}%` } // PostgreSQL case-insensitive search
+                    },
+                    {
+                        // If you want to include search by employee name, use a join
+                        '$Employee.Employee_name$': { [sequelize_1.Op.iLike]: `%${search}%` } // Search in related Employee's name
+                    }
+                ]
             },
             include: [
                 {
@@ -142,6 +229,8 @@ Task.get("/project-employees/:projectId/exclude", autherticateTeamLead_1.authent
                     required: true,
                 },
             ],
+            limit: parseInt(limit),
+            offset: parseInt(offset),
             logging: console.log, // Log the generated SQL query
         });
         // Log the results to verify data before sending response
@@ -355,58 +444,278 @@ Task.post('/importTasks/:Project_Id', autherticateTeamLead_1.authenticateTeamLea
 //       return res.status(500).json({ message: "An error occurred while fetching the task details" });
 //     }
 //   });
-Task.get("/task-details/:id", autherticateTeamLead_1.authenticateTeamLead, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { id } = req.params;
+// Define the GET API to retrieve all employees for a specific project
+// Define the GET API to retrieve employee details based on Project_Id
+// Define the GET API to retrieve employee details based on authenticated employee and Role_Id = 2
+// Define the GET API to retrieve employee details with role information
+Task.get('/project-employees', autherticateTeamLead_1.authenticateTeamLead, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        // Step 1: Fetch the task details from TaskDetails table
-        const taskDetails = yield Tbl_TaskDetails_1.default.findOne({
-            where: { Task_details_Id: id, Is_deleted: false }, // Only fetch if not deleted
-        });
-        if (!taskDetails) {
-            return res.status(404).json({ message: "Task not found" });
+        const empId = req.user.Emp_Id; // Get the Emp_Id from authenticated user
+        if (!empId) {
+            return res.status(400).json({ message: 'Employee ID not found in the request.' });
         }
-        // Step 2: Extract Assigned_Emp_Id from TaskDetails
-        const { Assigned_Emp_Id, Project_Id } = taskDetails;
-        // Step 3: Fetch Employee details, which includes Role_Id
-        const employee = yield Tbl_Employee_1.default.findOne({
-            where: { Emp_Id: Assigned_Emp_Id },
-            attributes: ['Emp_Id', 'Employee_name', 'Role_Id'], // Include Role_Id
+        // Step 1: Find the project where this employee has Role_Id = 2
+        const projectEmployee = yield Tbl_ProjectEmployee_1.default.findOne({
+            where: { Emp_Id: empId, Role_Id: 2, Is_deleted: false },
+            attributes: ['Project_Id'], // Fetch Project_Id
         });
-        if (!employee) {
-            return res.status(404).json({ message: "Employee not found" });
+        if (!projectEmployee) {
+            return res.status(404).json({ message: 'No project found for this employee with Role_Id = 2.' });
         }
-        // Step 4: Fetch Role details using Role_Id from Tbl_Employee
-        const { Role_Id } = employee;
-        const role = yield Tbl_Role_1.default.findOne({
-            where: { Role_Id },
-            attributes: ['Role_Id', 'Name'], // Specify the fields to retrieve
+        const projectId = projectEmployee.Project_Id;
+        // Step 2: Fetch all employees for this project
+        const projectEmployees = yield Tbl_ProjectEmployee_1.default.findAll({
+            where: { Project_Id: projectId, Is_deleted: false },
+            attributes: ['Emp_Id', 'Degesination', 'Role_Id'], // Fetch Emp_Id, Degesination, and Role_Id
         });
-        if (!role) {
-            return res.status(404).json({ message: "Role not found" });
+        if (projectEmployees.length === 0) {
+            return res.status(404).json({ message: 'No employees found for this project.' });
         }
-        // Step 5: Fetch Project details using Project_Id
-        const project = yield Tbl_Project_1.default.findOne({
-            where: { Project_Id },
-            attributes: ['Project_Name'], // Specify the fields to retrieve
+        // Step 3: Get Employee names and Role names from Employee and Role table
+        const employeeDetails = yield Promise.all(projectEmployees.map((projectEmployee) => __awaiter(void 0, void 0, void 0, function* () {
+            // Fetch Employee name from Employee table
+            const employee = yield Tbl_Employee_1.default.findOne({
+                where: { Emp_Id: projectEmployee.Emp_Id, Is_deleted: false },
+                attributes: ['Emp_Id', 'Employee_name'], // Fetch Emp_Id and Employee_name
+            });
+            // Fetch Role name from Role table
+            const role = yield Tbl_Role_1.default.findOne({
+                where: { Role_Id: projectEmployee.Role_Id, Is_deleted: false },
+                attributes: ['Role_Id', 'Name'], // Fetch Role_Id and Role Name
+            });
+            return {
+                empId: (employee === null || employee === void 0 ? void 0 : employee.Emp_Id) || projectEmployee.Emp_Id,
+                employeeName: (employee === null || employee === void 0 ? void 0 : employee.Employee_name) || 'Unknown',
+                designation: projectEmployee.Degesination,
+                roleName: (role === null || role === void 0 ? void 0 : role.Name) || 'Unknown', // In case role is not found
+            };
+        })));
+        // Step 4: Return the employee details with role name
+        return res.status(200).json({
+            projectId,
+            employees: employeeDetails,
         });
-        // Combine the results
-        const result = {
-            taskDetails,
-            employee: {
-                Emp_Id: employee.Emp_Id,
-                Employee_name: employee.Employee_name,
+    }
+    catch (error) {
+        console.error('Error fetching employee data:', error); // Log the error
+        return res.status(500).json({ message: 'An error occurred while fetching employee data.' });
+    }
+}));
+// get own task of teamLead
+// Define the GET API to retrieve tasks for the authenticated employee where Role_Id = 2
+// Define the GET API to retrieve project names and task details for the authenticated employee
+Task.get('/team-lead-tasks', autherticateTeamLead_1.authenticateTeamLead, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const assignedEmpId = req.user.Emp_Id; // Get the Emp_Id from the authenticated user
+        if (!assignedEmpId) {
+            return res.status(400).json({ message: 'Assigned employee ID not found in request.' });
+        }
+        // Step 1: Find unique project IDs and task details for tasks assigned to this employee
+        const assignedTasks = yield Tbl_TaskDetails_1.default.findAll({
+            where: {
+                Assigned_Emp_Id: assignedEmpId,
+                Is_deleted: false, // Filter out deleted tasks
             },
-            role: {
-                Role_Id: role.Role_Id,
-                Name: role.Name,
+            attributes: [
+                'Task_details_Id',
+                'Task_Details',
+                'Emp_Id',
+                'Project_Id',
+                'Status',
+                'Start_Date',
+                'Start_Time',
+                'End_Date',
+                'End_Time',
+                'Extend_Start_Date',
+                'Extend_Start_Time',
+                'Extend_End_Time',
+                'Remarks',
+                'Role_Id',
+                'Assigned_Emp_Id',
+                'Actual_Start_Date',
+                'Actual_Start_Time',
+                'Project_Id', // Corrected field: Project ID
+            ],
+        });
+        if (!assignedTasks.length) {
+            return res.status(404).json({ message: 'No tasks found for this team leader.' });
+        }
+        // Step 2: Extract unique project IDs from assigned tasks
+        const projectIds = [...new Set(assignedTasks.map(task => task.Project_Id))]; // Corrected field: Project ID
+        // Step 3: Get project names using the unique project IDs
+        const projects = yield Tbl_Project_1.default.findAll({
+            where: {
+                Project_Id: projectIds,
+                Is_deleted: false, // Filter out deleted projects
             },
-            project: project ? { Project_Name: project.Project_Name } : null
-        };
-        return res.status(200).json(result);
+            attributes: [
+                'Project_Id',
+                'Project_Name', // Corrected field: Project Name
+            ],
+        });
+        // Step 4: Format the response to include project names and corresponding task details
+        const projectTasks = projects.map(project => {
+            // Filter tasks that match this project ID
+            const tasks = assignedTasks
+                .filter(task => task.Project_Id === project.Project_Id) // Corrected field: Project ID
+                .map(task => ({
+                Task_details_Id: task.Task_details_Id,
+                taskDetails: task.Task_Details,
+                Emp_Id: task.Emp_Id,
+                Project_Id: task.Project_Id,
+                Status: task.Status,
+                Start_Date: task.Start_Date,
+                Start_Time: task.Start_Time,
+                End_Date: task.End_Date,
+                End_Time: task.End_Time,
+                Extend_Start_Date: task.Extend_Start_Date,
+                Extend_Start_Time: task.Extend_Start_Time,
+                Extend_End_Time: task.Extend_End_Time,
+                Remarks: task.Remarks,
+                Role_Id: task.Role_Id,
+                Assigned_Emp_Id: task.Assigned_Emp_Id,
+                Actual_Start_Date: task.Actual_Start_Date,
+                Actual_Start_Time: task.Actual_Start_Time,
+                //Project_Id: task.Project_Id,
+            }));
+            return {
+                projectId: project.Project_Id,
+                projectName: project.Project_Name,
+                tasks, // Include task details associated with this project
+            };
+        });
+        return res.status(200).json({ projectTasks });
+    }
+    catch (error) {
+        console.error('Error fetching projects and tasks for team lead:', error);
+        return res.status(500).json({ message: 'An error occurred while fetching projects and tasks.' });
+    }
+}));
+//
+Task.patch('/UpdateTask/:taskId', autherticateTeamLead_1.authenticateTeamLead, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { taskId } = req.params; // Get the task ID from the route parameters
+    const Emp_Id = req.user.Emp_Id; // Get employee ID from the authenticated user
+    try {
+        const { Start_Time, Start_Date, Task_Details, End_Date, End_Time, Assigned_Emp_Id, } = req.body; // Destructure the fields from the request body
+        // Find the task by its ID
+        const task = yield Tbl_TaskDetails_1.default.findOne({ where: { Task_details_Id: taskId, Emp_Id } });
+        if (!task) {
+            return res.status(404).json({ message: 'Task not found or not authorized' });
+        }
+        // Update the task with the new data, if it exists
+        const updatedTask = yield task.update({
+            Start_Time: Start_Time || task.Start_Time,
+            Start_Date: Start_Date || task.Start_Date,
+            Task_Details: Task_Details || task.Task_Details,
+            End_Date: End_Date || task.End_Date,
+            End_Time: End_Time || task.End_Time,
+            Assigned_Emp_Id: Assigned_Emp_Id || task.Assigned_Emp_Id,
+        });
+        return res.status(200).json({
+            message: 'Task updated successfully',
+            task: updatedTask,
+        });
+    }
+    catch (error) {
+        console.error(error);
+        return res.status(500).json({
+            message: 'Error updating task',
+            error: error.message,
+        });
+    }
+}));
+Task.get("/assigned", autherticateTeamLead_1.authenticateTeamLead, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const Assigned_Emp_Id = req.user.Emp_Id;
+    const { page = 1, limit = 5, search = '' } = req.query;
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+    try {
+        // Query the database to find all tasks assigned to the employee and exclude completed tasks
+        const { count, rows: taskDetails } = yield Tbl_TaskDetails_1.default.findAndCountAll({
+            where: {
+                Assigned_Emp_Id: Assigned_Emp_Id,
+                Is_deleted: false,
+                [sequelize_1.Op.or]: [
+                    { Task_Details: { [sequelize_1.Op.iLike]: `%${search}%` } }, // Search in Task_Details
+                ]
+            },
+            include: [
+                {
+                    model: Tbl_Project_1.default,
+                    attributes: ['Project_Name'],
+                    where: {
+                        Project_Name: { [sequelize_1.Op.iLike]: `%${search}%` }, // Search in Project_Name
+                    },
+                    required: false, // Make the join optional (tasks without projects won't be excluded)
+                }
+            ],
+            limit: parseInt(limit),
+            offset: offset, // Set offset for pagination
+        });
+        // Check if tasks are found
+        return res.status(200).json({
+            total: count,
+            page: parseInt(page),
+            limit: parseInt(limit),
+            tasks: taskDetails.map(task => (Object.assign({}, task.toJSON())))
+        });
     }
     catch (error) {
         console.error("Error fetching task details:", error);
-        return res.status(500).json({ message: "An error occurred while fetching the task details" });
+        return res.status(500).json({ message: "An error occurred while fetching task details." });
+    }
+}));
+Task.put('/UpdateTask/:Task_details_Id', autherticateTeamLead_1.authenticateTeamLead, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { Task_details_Id } = req.params;
+        const { Status, Remarks, Actual_Start_Date, Actual_Start_Time } = req.body;
+        // Find the task by Task_details_Id
+        const task = yield Tbl_TaskDetails_1.default.findOne({
+            where: { Task_details_Id, Is_deleted: false } // Ensure that the task is not soft-deleted
+        });
+        if (!task) {
+            return res.status(404).json({
+                message: 'Task not found'
+            });
+        }
+        // Prepare update payload
+        let updatePayload = { Status };
+        // Handle Actual_Start_Date and Actual_Start_Time
+        if (Actual_Start_Date && Actual_Start_Time) {
+            // If both are provided, use them to update the task
+            updatePayload.Actual_Start_Date = Actual_Start_Date;
+            updatePayload.Actual_Start_Time = Actual_Start_Time;
+        }
+        else {
+            // If either is missing, use Start_Date and Start_Time
+            updatePayload.Actual_Start_Date = task.Start_Date; // Fallback to Start_Date
+            updatePayload.Actual_Start_Time = task.Start_Time; // Fallback to Start_Time
+        }
+        // Check if Status is 'Completed' and Remarks is not empty
+        if (Status === 'Completed' && Remarks) {
+            // Get current date and time
+            const currentDate = new Date();
+            const currentTimeString = currentDate.toTimeString().split(' ')[0].slice(0, 5); // Format as HH:mm
+            // Add Extend_End_Date and Extend_End_Time to update payload
+            updatePayload.Extend_End_Date = currentDate; // Set the current date
+            updatePayload.Extend_End_Time = currentTimeString; // Set the current time
+        }
+        // Always update Remarks if provided
+        if (Remarks) {
+            updatePayload.Remarks = Remarks;
+        }
+        // Update the task
+        const updatedTask = yield task.update(updatePayload);
+        return res.status(200).json({
+            message: 'Task updated successfully',
+            task: updatedTask
+        });
+    }
+    catch (error) {
+        const errorMessage = error.message || 'Error updating task';
+        console.error(error);
+        return res.status(500).json({
+            message: errorMessage
+        });
     }
 }));
 exports.default = Task;

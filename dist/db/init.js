@@ -18,7 +18,7 @@ const Tbl_Role_1 = __importDefault(require("./models/Tbl_Role"));
 const Tbl_Task_1 = __importDefault(require("./models/Tbl_Task"));
 const Tbl_TaskDetails_1 = __importDefault(require("./models/Tbl_TaskDetails"));
 // Import your data insertion functions
-const projectData_1 = require("./FixedData/projectData");
+// import { addProject } from "./FixedData/projectData"
 const roleData_1 = require("./FixedData/roleData");
 const Tbl_ProjectEmployee_1 = __importDefault(require("./models/Tbl_ProjectEmployee"));
 const addEmploy_1 = require("./FixedData/addEmploy");
@@ -32,7 +32,7 @@ function init() {
         yield Tbl_TaskDetails_1.default.sync({ alter: isDev });
         yield Tbl_TaskDetails_1.default.sync({ alter: isDev });
         yield Tbl_ProjectEmployee_1.default.sync({ alter: isDev });
-        yield (0, projectData_1.addProject)();
+        // await addProject(); 
         yield (0, roleData_1.addRole)();
         yield (0, addEmploy_1.addDefaultEmployees)();
     });
