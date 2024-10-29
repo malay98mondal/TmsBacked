@@ -58,18 +58,20 @@ projectEmployeeRoutes.post('/:projectId', (req, res) => __awaiter(void 0, void 0
         }
         // Check if the employee is already a team lead in any project
         if (Role_Id === 2) { // Check for Team_Lead role
+            // Check if there's already a team lead with the same designation for the project
             const existingTeamLead = yield Tbl_ProjectEmployee_1.default.findOne({
                 where: {
-                    Emp_Id: Emp_Id,
+                    Project_Id: projectIdNumber,
                     Role_Id: 2,
+                    Degesination,
                     Is_deleted: false
                 },
             });
             if (existingTeamLead) {
-                // If a team lead already exists for this employee, return an error
+                // If a team lead with the same designation already exists for this project, return an error
                 return res.status(409).json({
                     success: false,
-                    message: `Employee is already a team lead in another project.`,
+                    message: `A team lead with the designation '${Degesination}' already exists for this project.`,
                 });
             }
         }
