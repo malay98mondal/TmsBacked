@@ -9,7 +9,6 @@ import xlsx from 'xlsx';
 import Role from '../db/models/Tbl_Role';
 import { authenticateTeamLead } from '../middleware/autherticateTeamLead';
 import { parse, isValid } from 'date-fns';
-
 const Task = Router();
 
 // Multer configuration for file upload
@@ -344,7 +343,6 @@ Task.post('/CreateTask',authenticateTeamLead, async (req:any, res:any) => {
   //   }
   // });
   
-
   Task.post('/importTasks/:Project_Id', authenticateTeamLead, upload.single('file'), async (req: any, res: Response) => {
     try {
         if (!req.file) {
@@ -370,6 +368,16 @@ Task.post('/CreateTask',authenticateTeamLead, async (req:any, res:any) => {
         };
 
         const parseDate = (dateString: any) => {
+            // Convert Excel date number to a Date object if necessary
+            if (typeof dateString === 'number') {
+                return new Date(Math.round((dateString - 25569) * 86400 * 1000)); // Convert Excel date number to JS Date
+            }
+
+            // Check if dateString is a valid type before parsing
+            if (typeof dateString !== 'string') {
+                throw new Error(`Invalid date format: ${dateString}`);
+            }
+
             const acceptedFormats = ['MM/dd/yyyy', 'yyyy-MM-dd', 'yyyy/MM/dd', 'dd/MM/yyyy', 'MM/dd/yy', 'dd/MM/yy'];
             let parsedDate;
 
@@ -384,10 +392,10 @@ Task.post('/CreateTask',authenticateTeamLead, async (req:any, res:any) => {
 
         const formatDateWithTimezone = (date: Date, timeString: string) => {
             // Set the default time
-            const [hours, minutes, seconds] = timeString.split(':');
+            const [hours, minutes] = timeString.split(':');
 
-            // Set the hours, minutes, and seconds on the date
-            date.setHours(parseInt(hours), parseInt(minutes), parseInt(seconds.split('.')[0]), parseInt(seconds.split('.')[1]));
+            // Set the hours and minutes on the date
+            date.setHours(parseInt(hours), parseInt(minutes), 0, 0); // Set seconds and milliseconds to zero
 
             // Format the date in YYYY-MM-DD HH:mm:ss.SSS±hh format
             const offset = date.getTimezoneOffset();
@@ -402,11 +410,15 @@ Task.post('/CreateTask',authenticateTeamLead, async (req:any, res:any) => {
         const tasks = await Promise.all(
             data.map(async (row: any) => {
                 try {
+                    console.log('Processing row:', row); // Debug: Log the row data
                     let { Start_Time, Task_Details, End_Date, End_Time, Role_Id, Assigned_Emp_Id } = row;
 
                     Start_Time = convertExcelTimeToTimeString(Start_Time);
                     End_Time = convertExcelTimeToTimeString(End_Time);
+                    console.log('End_Date before parsing:', End_Date); // Debug: Log End_Date before parsing
+
                     End_Date = parseDate(End_Date);
+                    console.log('End_Date after parsing:', End_Date); // Debug: Log End_Date after parsing
 
                     const formattedEndDateString = formatDateWithTimezone(End_Date, '07:10:58.017'); // Get the formatted string
                     const formattedEndDate = new Date(formattedEndDateString); // Convert to Date object
