@@ -117,6 +117,11 @@ Task.get('/tasks', autherticateTeamLead_1.authenticateTeamLead, (req, res) => __
                     },
                 },
                 {
+                    Status: {
+                        [sequelize_1.Op.iLike]: `%${search}%`, // Case-insensitive search in Task_Details
+                    },
+                },
+                {
                     '$Employee.Employee_name$': {
                         [sequelize_1.Op.iLike]: `%${search}%`, // Case-insensitive search in Employee_name
                     },
@@ -206,6 +211,7 @@ Task.get("/project-employees/:projectId/exclude", autherticateTeamLead_1.authent
         const projectEmployees = yield Tbl_ProjectEmployee_1.default.findAll({
             where: {
                 Project_Id: projectId,
+                Emp_Id: { [sequelize_1.Op.ne]: employeeId },
                 Is_deleted: false,
                 [sequelize_1.Op.or]: [
                     {
@@ -326,6 +332,14 @@ Task.post('/importTasks/:Project_Id', autherticateTeamLead_1.authenticateTeamLea
             return excelTime;
         };
         const parseDate = (dateString) => {
+            // Convert Excel date number to a Date object if necessary
+            if (typeof dateString === 'number') {
+                return new Date(Math.round((dateString - 25569) * 86400 * 1000)); // Convert Excel date number to JS Date
+            }
+            // Check if dateString is a valid type before parsing
+            if (typeof dateString !== 'string') {
+                throw new Error(`Invalid date format: ${dateString}`);
+            }
             const acceptedFormats = ['MM/dd/yyyy', 'yyyy-MM-dd', 'yyyy/MM/dd', 'dd/MM/yyyy', 'MM/dd/yy', 'dd/MM/yy'];
             let parsedDate;
             for (const format of acceptedFormats) {
@@ -338,9 +352,9 @@ Task.post('/importTasks/:Project_Id', autherticateTeamLead_1.authenticateTeamLea
         };
         const formatDateWithTimezone = (date, timeString) => {
             // Set the default time
-            const [hours, minutes, seconds] = timeString.split(':');
-            // Set the hours, minutes, and seconds on the date
-            date.setHours(parseInt(hours), parseInt(minutes), parseInt(seconds.split('.')[0]), parseInt(seconds.split('.')[1]));
+            const [hours, minutes] = timeString.split(':');
+            // Set the hours and minutes on the date
+            date.setHours(parseInt(hours), parseInt(minutes), 0, 0); // Set seconds and milliseconds to zero
             // Format the date in YYYY-MM-DD HH:mm:ss.SSS±hh format
             const offset = date.getTimezoneOffset();
             const offsetHours = String(Math.abs(Math.floor(offset / 60))).padStart(2, '0');
@@ -351,10 +365,13 @@ Task.post('/importTasks/:Project_Id', autherticateTeamLead_1.authenticateTeamLea
         };
         const tasks = yield Promise.all(data.map((row) => __awaiter(void 0, void 0, void 0, function* () {
             try {
+                console.log('Processing row:', row); // Debug: Log the row data
                 let { Start_Time, Task_Details, End_Date, End_Time, Role_Id, Assigned_Emp_Id } = row;
                 Start_Time = convertExcelTimeToTimeString(Start_Time);
                 End_Time = convertExcelTimeToTimeString(End_Time);
+                console.log('End_Date before parsing:', End_Date); // Debug: Log End_Date before parsing
                 End_Date = parseDate(End_Date);
+                console.log('End_Date after parsing:', End_Date); // Debug: Log End_Date after parsing
                 const formattedEndDateString = formatDateWithTimezone(End_Date, '07:10:58.017'); // Get the formatted string
                 const formattedEndDate = new Date(formattedEndDateString); // Convert to Date object
                 return Tbl_TaskDetails_1.default.create({
@@ -635,7 +652,8 @@ Task.get("/assigned", autherticateTeamLead_1.authenticateTeamLead, (req, res) =>
                 Assigned_Emp_Id: Assigned_Emp_Id,
                 Is_deleted: false,
                 [sequelize_1.Op.or]: [
-                    { Task_Details: { [sequelize_1.Op.iLike]: `%${search}%` } }, // Search in Task_Details
+                    { Task_Details: { [sequelize_1.Op.iLike]: `%${search}%` } },
+                    { Status: { [sequelize_1.Op.iLike]: `%${search}%` } },
                 ]
             },
             include: [
