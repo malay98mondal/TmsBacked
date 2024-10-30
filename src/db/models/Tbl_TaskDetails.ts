@@ -98,7 +98,7 @@ TaskDetails.init(
       type: DataTypes.STRING(50),
     },
     Task_Details:{
-      type:DataTypes.STRING(70),
+      type:DataTypes.STRING(200),
     },
     End_Date: {
       type: DataTypes.DATE, // Use DATEONLY for storing only date (without time)
