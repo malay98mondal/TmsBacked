@@ -422,45 +422,51 @@ Task.post('/importTasks/:Project_Id', autherticateTeamLead_1.authenticateTeamLea
         }
     }
 }));
-// Task.get("/task-details/:id",authenticateTeamLead, async (req: Request, res: Response) => {
-//     const { id } = req.params;
-//     try {
-//       // Step 1: Fetch the task details
-//       const taskDetails = await TaskDetails.findOne({
-//         where: { Task_details_Id: id, Is_deleted: false }, // Only fetch if not deleted
-//       });
-//       if (!taskDetails) {
-//         return res.status(404).json({ message: "Task not found" });
-//       }
-//       // Step 2: Extract Emp_Id and Role_Id
-//       const { Assigned_Emp_Id, Role_Id,Project_Id } = taskDetails;
-//       // Step 3: Fetch Employee details
-//       const employee = await Employee.findOne({
-//         where: { Emp_Id:Assigned_Emp_Id }, // Assuming Emp_Id is the primary key for Employee
-//         attributes: ['Emp_Id', 'Employee_name'], // Specify the fields you want
-//       });
-//       // Step 4: Fetch Role details
-//       const role = await Role.findOne({
-//         where: { Role_Id }, // Assuming Role_Id is the primary key for Role
-//         attributes: ['Role_Id', 'Name'], // Specify the fields you want
-//       });
-//       const project = await Project.findOne({
-//         where: { Project_Id:Project_Id }, // Assuming Emp_Id is the primary key for Employee
-//         attributes: [ 'Project_Name'], // Specify the fields you want
-//       });
-//       // Combine the results
-//       const result = {
-//         taskDetails,
-//         employee: employee || null, // Set to null if employee is not found
-//         role: role || null,
-//         project :project|| null
-//       };
-//       return res.status(200).json(result);
-//     } catch (error) {
-//       console.error("Error fetching task details:", error);
-//       return res.status(500).json({ message: "An error occurred while fetching the task details" });
-//     }
-//   });
+Task.get("/task-details/:id", autherticateTeamLead_1.authenticateTeamLead, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { id } = req.params;
+    try {
+        // Step 1: Fetch the task details
+        const taskDetails = yield Tbl_TaskDetails_1.default.findOne({
+            where: { Task_details_Id: id, Is_deleted: false }, // Only fetch if not deleted
+        });
+        if (!taskDetails) {
+            return res.status(404).json({ message: "Task not found" });
+        }
+        // Step 2: Extract Emp_Id and Role_Id
+        const { Assigned_Emp_Id, Project_Id } = taskDetails;
+        // Step 3: Fetch Employee details
+        const employee = yield Tbl_Employee_1.default.findOne({
+            where: { Emp_Id: Assigned_Emp_Id },
+            attributes: ['Emp_Id', 'Role_Id', 'Employee_name'], // Specify the fields you want
+        });
+        if (!employee) {
+            return res.status(404).json({ message: "Employee not found" });
+        }
+        // Extract Role_Id from the employee record
+        const { Role_Id } = employee;
+        // Step 4: Fetch Role details
+        const role = yield Tbl_Role_1.default.findOne({
+            where: { Role_Id },
+            attributes: ['Role_Id', 'Name'], // Specify the fields you want
+        });
+        const project = yield Tbl_Project_1.default.findOne({
+            where: { Project_Id: Project_Id },
+            attributes: ['Project_Name'], // Specify the fields you want
+        });
+        // Combine the results
+        const result = {
+            taskDetails,
+            employee: employee || null,
+            role: role || null,
+            project: project || null
+        };
+        return res.status(200).json(result);
+    }
+    catch (error) {
+        console.error("Error fetching task details:", error);
+        return res.status(500).json({ message: "An error occurred while fetching the task details" });
+    }
+}));
 // Define the GET API to retrieve all employees for a specific project
 // Define the GET API to retrieve employee details based on Project_Id
 // Define the GET API to retrieve employee details based on authenticated employee and Role_Id = 2

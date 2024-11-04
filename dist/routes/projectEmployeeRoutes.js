@@ -104,6 +104,92 @@ projectEmployeeRoutes.post('/:projectId', (req, res) => __awaiter(void 0, void 0
         });
     }
 }));
+//patch 
+projectEmployeeRoutes.put('/:projectId/:projectMemberId', authenticateManager_1.authenticateManager, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { projectId, projectMemberId } = req.params;
+    const { Emp_Id, Role_Id, Degesination } = req.body;
+    try {
+        // Validate input data
+        if (!Emp_Id || !Role_Id || !Degesination) {
+            return res.status(400).json({
+                success: false,
+                message: 'Emp_Id, Role_Id, and Degesination are required.',
+            });
+        }
+        // Find the existing ProjectEmployee record
+        const projectEmployee = yield Tbl_ProjectEmployee_1.default.findOne({
+            where: {
+                ProjectMember_Id: projectMemberId,
+                Project_Id: projectId,
+                Is_deleted: false,
+            },
+        });
+        if (!projectEmployee) {
+            return res.status(404).json({
+                success: false,
+                message: 'ProjectEmployee record not found.',
+            });
+        }
+        // Check if an employee is already a team lead in another project
+        if (Role_Id === 2) { // Team Lead role
+            const existingTeamLeadProject = yield Tbl_ProjectEmployee_1.default.findOne({
+                where: {
+                    Emp_Id,
+                    Role_Id: 2,
+                    Project_Id: { [sequelize_1.Op.ne]: projectId },
+                    Is_deleted: false,
+                },
+            });
+            if (existingTeamLeadProject) {
+                return res.status(409).json({
+                    success: false,
+                    message: `Employee is already a team lead in another project (Project ID: ${existingTeamLeadProject.Project_Id}).`,
+                });
+            }
+            // Check if there's already a team lead for this designation within the same project
+            const existingDesignationTeamLead = yield Tbl_ProjectEmployee_1.default.findOne({
+                where: {
+                    Project_Id: projectId,
+                    Role_Id: 2,
+                    Degesination,
+                    Is_deleted: false,
+                },
+            });
+            if (existingDesignationTeamLead && existingDesignationTeamLead.ProjectMember_Id !== Number(projectMemberId)) {
+                return res.status(409).json({
+                    success: false,
+                    message: `A team lead with the designation '${Degesination}' already exists for this project.`,
+                });
+            }
+        }
+        // Update the ProjectEmployee record
+        projectEmployee.Emp_Id = Emp_Id;
+        projectEmployee.Role_Id = Role_Id;
+        projectEmployee.Degesination = Degesination;
+        yield projectEmployee.save();
+        // If the role is being updated, also update the role in the Employee table
+        if (projectEmployee.Role_Id !== Role_Id && Role_Id === 2) { // Team Lead role
+            yield Tbl_Employee_1.default.update({ Role_Id }, { where: { Emp_Id } });
+        }
+        else if (projectEmployee.Role_Id === 2 && Role_Id !== 2) {
+            // If the role is downgraded from team lead to member, update the Employee role accordingly
+            yield Tbl_Employee_1.default.update({ Role_Id: 3 }, // Assuming '3' is the default member role
+            { where: { Emp_Id } });
+        }
+        return res.status(200).json({
+            success: true,
+            message: 'ProjectEmployee updated successfully.',
+            data: projectEmployee,
+        });
+    }
+    catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: 'Failed to update the project employee',
+            error: error.message,
+        });
+    }
+}));
 // Get API
 projectEmployeeRoutes.get('/:projectId', authenticateManager_1.authenticateManager, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const projectIdString = req.params.projectId;
