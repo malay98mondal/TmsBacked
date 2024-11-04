@@ -45,7 +45,7 @@ TaskDetails.init({
         type: sequelize_1.DataTypes.STRING(50),
     },
     Task_Details: {
-        type: sequelize_1.DataTypes.STRING(70),
+        type: sequelize_1.DataTypes.STRING(200),
     },
     End_Date: {
         type: sequelize_1.DataTypes.DATE, // Use DATEONLY for storing only date (without time)
