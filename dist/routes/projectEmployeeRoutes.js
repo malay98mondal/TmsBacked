@@ -105,12 +105,14 @@ projectEmployeeRoutes.post('/:projectId', (req, res) => __awaiter(void 0, void 0
     }
 }));
 //patch 
-projectEmployeeRoutes.put('/:projectId/:projectMemberId', authenticateManager_1.authenticateManager, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+projectEmployeeRoutes.patch('/:projectId/:projectMemberId', authenticateManager_1.authenticateManager, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { projectId, projectMemberId } = req.params;
     const { Emp_Id, Role_Id, Degesination } = req.body;
     try {
+        console.log('Request received to update ProjectEmployee:', { projectId, projectMemberId, Emp_Id, Role_Id, Degesination });
         // Validate input data
         if (!Emp_Id || !Role_Id || !Degesination) {
+            console.error('Validation error: Missing required fields');
             return res.status(400).json({
                 success: false,
                 message: 'Emp_Id, Role_Id, and Degesination are required.',
@@ -125,11 +127,13 @@ projectEmployeeRoutes.put('/:projectId/:projectMemberId', authenticateManager_1.
             },
         });
         if (!projectEmployee) {
+            console.warn('ProjectEmployee record not found:', { projectMemberId, projectId });
             return res.status(404).json({
                 success: false,
                 message: 'ProjectEmployee record not found.',
             });
         }
+        console.log('Found ProjectEmployee record:', projectEmployee);
         // Check if an employee is already a team lead in another project
         if (Role_Id === 2) { // Team Lead role
             const existingTeamLeadProject = yield Tbl_ProjectEmployee_1.default.findOne({
@@ -141,6 +145,7 @@ projectEmployeeRoutes.put('/:projectId/:projectMemberId', authenticateManager_1.
                 },
             });
             if (existingTeamLeadProject) {
+                console.warn('Conflict: Employee is already a team lead in another project:', existingTeamLeadProject);
                 return res.status(409).json({
                     success: false,
                     message: `Employee is already a team lead in another project (Project ID: ${existingTeamLeadProject.Project_Id}).`,
@@ -156,33 +161,42 @@ projectEmployeeRoutes.put('/:projectId/:projectMemberId', authenticateManager_1.
                 },
             });
             if (existingDesignationTeamLead && existingDesignationTeamLead.ProjectMember_Id !== Number(projectMemberId)) {
+                console.warn('Conflict: A team lead with the same designation already exists:', existingDesignationTeamLead);
                 return res.status(409).json({
                     success: false,
                     message: `A team lead with the designation '${Degesination}' already exists for this project.`,
                 });
             }
         }
-        // Update the ProjectEmployee record
-        projectEmployee.Emp_Id = Emp_Id;
-        projectEmployee.Role_Id = Role_Id;
-        projectEmployee.Degesination = Degesination;
-        yield projectEmployee.save();
-        // If the role is being updated, also update the role in the Employee table
-        if (projectEmployee.Role_Id !== Role_Id && Role_Id === 2) { // Team Lead role
-            yield Tbl_Employee_1.default.update({ Role_Id }, { where: { Emp_Id } });
+        // Update the ProjectEmployee record using the update method
+        const [updated] = yield Tbl_ProjectEmployee_1.default.update({ Emp_Id, Role_Id, Degesination }, { where: { ProjectMember_Id: projectMemberId, Project_Id: projectId, Is_deleted: false } });
+        if (updated === 0) {
+            console.warn('Update failed: No rows affected');
+            return res.status(404).json({
+                success: false,
+                message: 'Update failed: No rows affected.',
+            });
         }
-        else if (projectEmployee.Role_Id === 2 && Role_Id !== 2) {
-            // If the role is downgraded from team lead to member, update the Employee role accordingly
-            yield Tbl_Employee_1.default.update({ Role_Id: 3 }, // Assuming '3' is the default member role
-            { where: { Emp_Id } });
+        console.log('ProjectEmployee updated successfully:', { Emp_Id, Role_Id, Degesination });
+        // If the role is being updated, also update the role in the Employee table
+        if (projectEmployee.Role_Id !== Role_Id) {
+            if (Role_Id === 2) { // Team Lead role
+                yield Tbl_Employee_1.default.update({ Role_Id }, { where: { Emp_Id } });
+            }
+            else if (projectEmployee.Role_Id === 2 && Role_Id !== 2) {
+                // If the role is downgraded from team lead to member, update the Employee role accordingly
+                yield Tbl_Employee_1.default.update({ Role_Id: 3 }, // Assuming '3' is the default member role
+                { where: { Emp_Id } });
+            }
         }
         return res.status(200).json({
             success: true,
             message: 'ProjectEmployee updated successfully.',
-            data: projectEmployee,
+            data: { Emp_Id, Role_Id, Degesination }, // Return updated data if needed
         });
     }
     catch (error) {
+        console.error('Error occurred while updating ProjectEmployee:', error.message);
         return res.status(500).json({
             success: false,
             message: 'Failed to update the project employee',
