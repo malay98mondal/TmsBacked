@@ -9,6 +9,7 @@ import xlsx from 'xlsx';
 import Role from '../db/models/Tbl_Role';
 import { authenticateTeamLead } from '../middleware/autherticateTeamLead';
 import { parse, isValid } from 'date-fns';
+import moment from 'moment';
 const Task = Router();
 
 // Multer configuration for file upload
@@ -192,9 +193,23 @@ Task.post('/CreateTask',authenticateTeamLead, async (req:any, res:any) => {
         Task_Details,
         End_Date,
         End_Time,
-        Role_Id,
+       // Role_Id,
         Assigned_Emp_Id,
       } = req.body;
+
+
+      // Retrieve Role_Id from ProjectEmployee model based on Emp_Id and Project_Id
+const projectEmployee = await ProjectEmployee.findOne({
+  where: { Emp_Id, Project_Id },
+  attributes: ['Role_Id'],
+});
+
+if (!projectEmployee) {
+  return res.status(404).json({ message: 'Role not found for the specified employee and project' });
+}
+
+const Role_Id = projectEmployee.Role_Id;
+
 
 
       const newTask = await TaskDetails.create({
@@ -720,6 +735,9 @@ Task.patch('/UpdateTask/:taskId', authenticateTeamLead, async (req: any, res: an
       Task_Details,
       End_Date,
       End_Time,
+      Role_Id,
+      Modified_By,
+      Modified_DateTime,
       Assigned_Emp_Id,
     } = req.body; // Destructure the fields from the request body
 
@@ -737,6 +755,9 @@ Task.patch('/UpdateTask/:taskId', authenticateTeamLead, async (req: any, res: an
       Task_Details: Task_Details || task.Task_Details,
       End_Date: End_Date || task.End_Date,
       End_Time: End_Time || task.End_Time,
+      Role_Id: Role_Id || task.Role_Id,  // Updated if provided
+      Modified_DateTime: new Date(),  // Set to current date and time
+      Modified_By:Modified_By||task.Emp_Id,  //updated
       Assigned_Emp_Id: Assigned_Emp_Id || task.Assigned_Emp_Id,
     });
 
@@ -803,10 +824,11 @@ Task.get("/assigned", authenticateTeamLead, async (req: any, res: any) => {
   }
 });
 
-Task.put('/UpdateTask/:Task_details_Id', authenticateTeamLead, async (req, res) => {
+Task.put('/UpdateTask/:Task_details_Id', authenticateTeamLead, async (req: any, res: any) => {
   try {
       const { Task_details_Id } = req.params;
       const { Status, Remarks, Actual_Start_Date, Actual_Start_Time } = req.body;
+      const Emp_Id = req.user.Emp_Id; // Get employee ID from the authenticated user
 
       // Find the task by Task_details_Id
       const task = await TaskDetails.findOne({
@@ -848,6 +870,11 @@ Task.put('/UpdateTask/:Task_details_Id', authenticateTeamLead, async (req, res) 
       if (Remarks) {
           updatePayload.Remarks = Remarks;
       }
+
+      updatePayload.Role_Id = task.Role_Id
+
+      // Set Modified_DateTime to current date and time
+      updatePayload.Modified_DateTime = new Date();
 
       // Update the task
       const updatedTask = await task.update(updatePayload);
