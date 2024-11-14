@@ -123,10 +123,11 @@ EmploySideRoute.get("/CompletedTask",authenticateMember, async (req: any, res: a
 
   //update
 
-  EmploySideRoute.put('/UpdateTask/:Task_details_Id', authenticateMember, async (req, res) => {
+  EmploySideRoute.put('/UpdateTask/:Task_details_Id', authenticateMember, async (req:any, res:any) => {
     try {
         const { Task_details_Id } = req.params;
         const { Status, Remarks, Actual_Start_Date, Actual_Start_Time } = req.body;
+        const Emp_Id  = req.user.Emp_Id;
 
         // Find the task by Task_details_Id
         const task = await TaskDetails.findOne({
@@ -169,8 +170,25 @@ EmploySideRoute.get("/CompletedTask",authenticateMember, async (req: any, res: a
             updatePayload.Remarks = Remarks;
         }
 
+        //  // Get current date and time in IST (Asia/Kolkata)
+        //  const currentDateIST = new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' });
+        //  const formattedISTDate = new Date(currentDateIST); // Convert it back to a Date object
+ 
+        //  // Set Modified_DateTime to current date and time in IST
+        //  updatePayload.Modified_DateTime = formattedISTDate.toISOString(); // Convert to ISO format for the database
+
+        
+
+        //Set Modified_DateTime to current date and time
+        updatePayload.Modified_DateTime = new Date();
+
+        //Set Modified_By to Emp_Id
+        updatePayload.Modified_By = Emp_Id;
+        
+
         // Update the task
         const updatedTask = await task.update(updatePayload);
+        
 
         return res.status(200).json({
             message: 'Task updated successfully',
