@@ -25,7 +25,7 @@ async function init() {
   await TaskDetails.sync({ alter: isDev });
   await ProjectEmployee.sync({ alter: isDev });
 
-  
+ 
     // await addProject(); 
     await addRole();
     await addDefaultEmployees();
