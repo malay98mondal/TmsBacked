@@ -161,7 +161,7 @@ EmploySideRoute.get("/CompletedTask",authenticateMember, async (req: any, res: a
             const currentTimeString = currentDate.toTimeString().split(' ')[0].slice(0, 5); // Format as HH:mm
           
             // Add Extend_End_Date and Extend_End_Time to update payload
-            updatePayload.Extend_End_Date = currentDate; // Set the current date
+            updatePayload.Extend_End_Date = currentDate; // update Set the current date 
             updatePayload.Extend_End_Time = currentTimeString; // Set the current time
         }
 
