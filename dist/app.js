@@ -20,8 +20,7 @@ const body_parser_1 = __importDefault(require("body-parser"));
 const init_1 = __importDefault(require("./db/init"));
 const cors = require("cors");
 const serverless_http_1 = __importDefault(require("serverless-http"));
-// import authRouter from './routes/auth.route'
-// import queueMail from './middleware/queueMail';
+const queueMail_1 = __importDefault(require("./middleware/queueMail"));
 const app = (0, express_1.default)();
 const port = process.env.PORT || 5000;
 app.use(cors()); // enable cors
@@ -30,6 +29,7 @@ app.use(express_1.default.json()); // josn middle ware
 app.use(body_parser_1.default.json());
 app.use(body_parser_1.default.urlencoded({ extended: true }));
 //app.use(queueMail);
+app.use(queueMail_1.default);
 // // database initialization
 (0, init_1.default)();
 //let uiCodePath = process.env.NODE_ENV == "development"? "client/dist" : "client-dist";

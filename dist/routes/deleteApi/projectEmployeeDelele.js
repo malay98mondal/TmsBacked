@@ -14,9 +14,13 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const Tbl_ProjectEmployee_1 = __importDefault(require("../../db/models/Tbl_ProjectEmployee")); // Adjust the path according to your project structure
+const Tbl_TaskDetails_1 = __importDefault(require("../../db/models/Tbl_TaskDetails"));
+const config_1 = __importDefault(require("../../db/config"));
+const Tbl_Employee_1 = __importDefault(require("../../db/models/Tbl_Employee"));
+const authenticateManager_1 = require("../../middleware/authenticateManager");
 const projectEmployeeDeleteRoute = (0, express_1.Router)();
 // Soft Delete API for ProjectEmployee by ProjectMember_Id
-projectEmployeeDeleteRoute.delete('/delete-project-employee/:ProjectMember_Id', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+projectEmployeeDeleteRoute.delete('/delete-project-employee/:ProjectMember_Id', authenticateManager_1.authenticateManager, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { ProjectMember_Id } = req.params; // Extract ProjectMember_Id from the route parameters
     try {
         // Find the ProjectEmployee by ProjectMember_Id and ensure it's not already soft deleted
@@ -34,6 +38,53 @@ projectEmployeeDeleteRoute.delete('/delete-project-employee/:ProjectMember_Id', 
     catch (error) {
         console.error('Error in soft deleting ProjectEmployee:', error);
         return res.status(500).json({ message: 'An error occurred while deleting the project employee.' });
+    }
+}));
+projectEmployeeDeleteRoute.delete('/projectEmployee/:projectId/:empId', authenticateManager_1.authenticateManager, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { projectId, empId } = req.params;
+    // Initialize a variable for the transaction instance
+    let transaction = null;
+    try {
+        // Start a transaction instance
+        transaction = yield config_1.default.transaction();
+        yield Tbl_ProjectEmployee_1.default.update({ Is_deleted: true }, {
+            where: {
+                Project_Id: projectId,
+                Emp_Id: empId,
+            },
+            transaction,
+        });
+        // Step 2: Soft delete all TaskDetails related to this Project_Id and Emp_Id
+        yield Tbl_TaskDetails_1.default.update({ Is_deleted: true }, {
+            where: {
+                Project_Id: projectId,
+                Assigned_Emp_Id: empId,
+            },
+            transaction,
+        });
+        const employee = yield Tbl_Employee_1.default.findOne({
+            where: {
+                Emp_Id: empId,
+            },
+            transaction,
+        });
+        if (employee && employee.Role_Id === 2) {
+            // Only update Role_Id to 3 if current Role_Id is 2
+            yield Tbl_Employee_1.default.update({ Role_Id: 3 }, {
+                where: {
+                    Emp_Id: empId,
+                },
+                transaction,
+            });
+        }
+        yield transaction.commit();
+        res.status(200).json({ message: "Project employee soft-deleted and tasks marked as deleted successfully." });
+    }
+    catch (error) {
+        if (transaction)
+            yield transaction.rollback();
+        console.error("Error soft-deleting project employee and tasks:", error);
+        res.status(500).json({ message: "An error occurred while soft-deleting project employee and tasks." });
     }
 }));
 exports.default = projectEmployeeDeleteRoute;

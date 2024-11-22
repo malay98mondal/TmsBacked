@@ -122,6 +122,7 @@ EmploySideRoute.put('/UpdateTask/:Task_details_Id', authenticateMember_1.authent
     try {
         const { Task_details_Id } = req.params;
         const { Status, Remarks, Actual_Start_Date, Actual_Start_Time } = req.body;
+        const Emp_Id = req.user.Emp_Id;
         // Find the task by Task_details_Id
         const task = yield Tbl_TaskDetails_1.default.findOne({
             where: { Task_details_Id, Is_deleted: false } // Ensure that the task is not soft-deleted
@@ -150,13 +151,22 @@ EmploySideRoute.put('/UpdateTask/:Task_details_Id', authenticateMember_1.authent
             const currentDate = new Date();
             const currentTimeString = currentDate.toTimeString().split(' ')[0].slice(0, 5); // Format as HH:mm
             // Add Extend_End_Date and Extend_End_Time to update payload
-            updatePayload.Extend_End_Date = currentDate; // Set the current date
+            updatePayload.Extend_End_Date = currentDate; // update Set the current date 
             updatePayload.Extend_End_Time = currentTimeString; // Set the current time
         }
         // Always update Remarks if provided
         if (Remarks) {
             updatePayload.Remarks = Remarks;
         }
+        //  // Get current date and time in IST (Asia/Kolkata)
+        //  const currentDateIST = new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' });
+        //  const formattedISTDate = new Date(currentDateIST); // Convert it back to a Date object
+        //  // Set Modified_DateTime to current date and time in IST
+        //  updatePayload.Modified_DateTime = formattedISTDate.toISOString(); // Convert to ISO format for the database
+        //Set Modified_DateTime to current date and time
+        updatePayload.Modified_DateTime = new Date();
+        //Set Modified_By to Emp_Id
+        updatePayload.Modified_By = Emp_Id;
         // Update the task
         const updatedTask = yield task.update(updatePayload);
         return res.status(200).json({
