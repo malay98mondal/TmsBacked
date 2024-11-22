@@ -4,6 +4,7 @@ import Role from '../db/models/Tbl_Role';
 import { authenticateManager } from '../middleware/authenticateManager';
 import { Op } from 'sequelize';
 import bcrypt from 'bcrypt';
+import queueMail from '../middleware/queueMail';
 
 const employeeRoutes = express.Router();
 
@@ -142,54 +143,77 @@ employeeRoutes.get('/role/:roleId', async (req: Request, res: Response) => {
 
 //post API
 
-employeeRoutes.post('/post',authenticateManager, async (req: Request, res: Response) => {
+employeeRoutes.post('/post', authenticateManager, queueMail, async (req: any, res: any) => {
     const { Employee_name, email, password } = req.body;
-
+  
     try {
-        if (!Employee_name || !email || !password) {
-            return res.status(400).json({
-                success: false,
-                message: 'Employee name, email, and password are required.',
-            });
-        }
-
-        const existingEmployee = await Employee.findOne({ 
-            where: { 
-                email, 
-                Is_deleted: false
-            } 
+      if (!Employee_name || !email || !password) {
+        return res.status(400).json({
+          success: false,
+          message: 'Employee name, email, and password are required.',
         });
-
-        if (existingEmployee) {
-            return res.status(400).json({
-                success: false,
-                message: 'Email is already in use.',
-            });
-        }
-
-        // Hash the password
-        const hashed_password = bcrypt.hashSync(password, 7);
-
-        const newEmployee = await Employee.create({
-            Employee_name,
-            Role_Id: 3,
-            email,
-            password: hashed_password,
-            Is_deleted: false,
+      }
+  
+      // Check if the email already exists
+      const existingEmployee = await Employee.findOne({
+        where: {
+          email,
+          Is_deleted: false,
+        },
+      });
+  
+      if (existingEmployee) {
+        return res.status(400).json({
+          success: false,
+          message: 'Email is already in use.',
         });
-
-        return res.status(201).json({
-            success: true,
-            data: newEmployee,
-        });
+      }
+  
+      // Hash the password
+      const hashed_password = bcrypt.hashSync(password, 7);
+  
+      // Create a new employee
+      const newEmployee = await Employee.create({
+        Employee_name,
+        Role_Id: 3,
+        email,
+        password: hashed_password,
+        Is_deleted: false,
+      });
+  
+      // Queue the welcome email with employee details
+      const mailOptions = {
+        to: email,
+        subject: 'Welcome to the Company',
+        text: `Hello ${Employee_name},
+  
+        Welcome to the team! Here are your account details:
+  
+        - **Employee ID**: ${newEmployee.Emp_Id}
+        - **Username**: ${Employee_name}
+        - **Email**: ${email}
+        - **Password**: ${password}
+  
+        Please keep this information secure and contact us if you have any questions.
+  
+        Best Regards,
+        The Task Management System`,
+      };
+  
+      await req.queueMail(mailOptions);
+  
+      return res.status(201).json({
+        success: true,
+        data: newEmployee,
+      });
     } catch (error: any) {
-        return res.status(500).json({
-            success: false,
-            message: 'Failed to create the employee',
-            error: error.message,
-        });
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to create the employee',
+        error: error.message,
+      });
     }
-});
+  });
 
 Employee.belongsTo(Role, { foreignKey: 'Role_Id', as: 'Role' }); // Ensure to use an alias if needed
 export default employeeRoutes;
