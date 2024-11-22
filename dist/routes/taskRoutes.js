@@ -176,7 +176,18 @@ Task.get('/tasks', autherticateTeamLead_1.authenticateTeamLead, (req, res) => __
 Task.post('/CreateTask', autherticateTeamLead_1.authenticateTeamLead, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const Emp_Id = req.user.Emp_Id;
     try {
-        const { Project_Id, Start_Time, Start_Date, Task_Details, End_Date, End_Time, Role_Id, Assigned_Emp_Id, } = req.body;
+        const { Project_Id, Start_Time, Start_Date, Task_Details, End_Date, End_Time, 
+        // Role_Id,
+        Assigned_Emp_Id, } = req.body;
+        // Retrieve Role_Id from ProjectEmployee model based on Emp_Id and Project_Id
+        const projectEmployee = yield Tbl_ProjectEmployee_1.default.findOne({
+            where: { Emp_Id, Project_Id },
+            attributes: ['Role_Id'],
+        });
+        if (!projectEmployee) {
+            return res.status(404).json({ message: 'Role not found for the specified employee and project' });
+        }
+        const Role_Id = projectEmployee.Role_Id;
         const newTask = yield Tbl_TaskDetails_1.default.create({
             Emp_Id,
             Project_Id,
@@ -619,7 +630,7 @@ Task.patch('/UpdateTask/:taskId', autherticateTeamLead_1.authenticateTeamLead, (
     const { taskId } = req.params; // Get the task ID from the route parameters
     const Emp_Id = req.user.Emp_Id; // Get employee ID from the authenticated user
     try {
-        const { Start_Time, Start_Date, Task_Details, End_Date, End_Time, Assigned_Emp_Id, } = req.body; // Destructure the fields from the request body
+        const { Start_Time, Start_Date, Task_Details, End_Date, End_Time, Role_Id, Modified_By, Modified_DateTime, Assigned_Emp_Id, } = req.body; // Destructure the fields from the request body
         // Find the task by its ID
         const task = yield Tbl_TaskDetails_1.default.findOne({ where: { Task_details_Id: taskId, Emp_Id } });
         if (!task) {
@@ -632,6 +643,9 @@ Task.patch('/UpdateTask/:taskId', autherticateTeamLead_1.authenticateTeamLead, (
             Task_Details: Task_Details || task.Task_Details,
             End_Date: End_Date || task.End_Date,
             End_Time: End_Time || task.End_Time,
+            Role_Id: Role_Id || task.Role_Id,
+            Modified_DateTime: new Date(),
+            Modified_By: Modified_By || task.Emp_Id,
             Assigned_Emp_Id: Assigned_Emp_Id || task.Assigned_Emp_Id,
         });
         return res.status(200).json({
@@ -692,6 +706,7 @@ Task.put('/UpdateTask/:Task_details_Id', autherticateTeamLead_1.authenticateTeam
     try {
         const { Task_details_Id } = req.params;
         const { Status, Remarks, Actual_Start_Date, Actual_Start_Time } = req.body;
+        const Emp_Id = req.user.Emp_Id; // Get employee ID from the authenticated user
         // Find the task by Task_details_Id
         const task = yield Tbl_TaskDetails_1.default.findOne({
             where: { Task_details_Id, Is_deleted: false } // Ensure that the task is not soft-deleted
@@ -727,6 +742,9 @@ Task.put('/UpdateTask/:Task_details_Id', autherticateTeamLead_1.authenticateTeam
         if (Remarks) {
             updatePayload.Remarks = Remarks;
         }
+        updatePayload.Role_Id = task.Role_Id;
+        // Set Modified_DateTime to current date and time
+        updatePayload.Modified_DateTime = new Date();
         // Update the task
         const updatedTask = yield task.update(updatePayload);
         return res.status(200).json({

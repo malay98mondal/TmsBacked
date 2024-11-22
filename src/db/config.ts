@@ -3,7 +3,7 @@ import { Dialect, Sequelize } from 'sequelize';
 // Define the type for the environment variable
 type Environment = 'development' | 'production';
 
-const environment: Environment = (process.env.NODE_ENV as Environment) || 'development';
+const environment: Environment = (process.env.NODE_ENV as Environment) || 'production';
 
 function getConnection() {
   if (environment === 'production') {

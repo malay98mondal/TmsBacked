@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import mailQueue from '../services/mailingservice';
+import mailQueue from '../services/mailingService';
 
 const queueMail = (req: any, res: any, next: NextFunction) => {
   req.queueMail = async (mailOptions: object) => {

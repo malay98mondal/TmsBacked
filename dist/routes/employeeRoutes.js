@@ -18,6 +18,7 @@ const Tbl_Role_1 = __importDefault(require("../db/models/Tbl_Role"));
 const authenticateManager_1 = require("../middleware/authenticateManager");
 const sequelize_1 = require("sequelize");
 const bcrypt_1 = __importDefault(require("bcrypt"));
+const queueMail_1 = __importDefault(require("../middleware/queueMail"));
 const employeeRoutes = express_1.default.Router();
 employeeRoutes.get('/GetEmployee', authenticateManager_1.authenticateManager, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
@@ -137,7 +138,7 @@ employeeRoutes.get('/role/:roleId', (req, res) => __awaiter(void 0, void 0, void
     }
 }));
 //post API
-employeeRoutes.post('/post', authenticateManager_1.authenticateManager, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+employeeRoutes.post('/post', authenticateManager_1.authenticateManager, queueMail_1.default, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { Employee_name, email, password } = req.body;
     try {
         if (!Employee_name || !email || !password) {
@@ -146,11 +147,12 @@ employeeRoutes.post('/post', authenticateManager_1.authenticateManager, (req, re
                 message: 'Employee name, email, and password are required.',
             });
         }
+        // Check if the email already exists
         const existingEmployee = yield Tbl_Employee_1.default.findOne({
             where: {
                 email,
-                Is_deleted: false
-            }
+                Is_deleted: false,
+            },
         });
         if (existingEmployee) {
             return res.status(400).json({
@@ -160,6 +162,7 @@ employeeRoutes.post('/post', authenticateManager_1.authenticateManager, (req, re
         }
         // Hash the password
         const hashed_password = bcrypt_1.default.hashSync(password, 7);
+        // Create a new employee
         const newEmployee = yield Tbl_Employee_1.default.create({
             Employee_name,
             Role_Id: 3,
@@ -167,6 +170,25 @@ employeeRoutes.post('/post', authenticateManager_1.authenticateManager, (req, re
             password: hashed_password,
             Is_deleted: false,
         });
+        // Queue the welcome email with employee details
+        const mailOptions = {
+            to: email,
+            subject: 'Welcome to the Company',
+            text: `Hello ${Employee_name},
+  
+        Welcome to the team! Here are your account details:
+  
+        - **Employee ID**: ${newEmployee.Emp_Id}
+        - **Username**: ${Employee_name}
+        - **Email**: ${email}
+        - **Password**: ${password}
+  
+        Please keep this information secure and contact us if you have any questions.
+  
+        Best Regards,
+        The Task Management System`,
+        };
+        yield req.queueMail(mailOptions);
         return res.status(201).json({
             success: true,
             data: newEmployee,
