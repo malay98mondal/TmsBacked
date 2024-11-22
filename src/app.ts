@@ -6,8 +6,7 @@ import bodyParser from 'body-parser';
 import dbInit from './db/init';
 const cors: any = require("cors"); 
 import serverless from 'serverless-http'
-// import authRouter from './routes/auth.route'
-// import queueMail from './middleware/queueMail';
+import queueMail from './middleware/queueMail';
 
 
 const app = express();
@@ -18,6 +17,7 @@ const port = process.env.PORT || 5000;
 	app.use(bodyParser.json());
 	app.use(bodyParser.urlencoded({ extended: true }));
 	//app.use(queueMail);
+	app.use(queueMail);
 
 
 
