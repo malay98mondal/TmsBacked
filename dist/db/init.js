@@ -12,7 +12,6 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-const Tbl_Employee_1 = __importDefault(require("./models/Tbl_Employee"));
 const Tbl_Project_1 = __importDefault(require("./models/Tbl_Project"));
 const Tbl_Role_1 = __importDefault(require("./models/Tbl_Role"));
 const Tbl_Task_1 = __importDefault(require("./models/Tbl_Task"));
@@ -22,7 +21,8 @@ const Tbl_TaskDetails_1 = __importDefault(require("./models/Tbl_TaskDetails"));
 const roleData_1 = require("./FixedData/roleData");
 const Tbl_ProjectEmployee_1 = __importDefault(require("./models/Tbl_ProjectEmployee"));
 const addEmploy_1 = require("./FixedData/addEmploy");
-const isDev = true;
+const Tbl_Employee_1 = __importDefault(require("./models/Tbl_Employee"));
+const isDev = false;
 function init() {
     return __awaiter(this, void 0, void 0, function* () {
         yield Tbl_Project_1.default.sync({ alter: isDev });

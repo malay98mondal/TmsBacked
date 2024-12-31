@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "nodemon src/app.ts",
     "start": "node dist/app.js",
+    "postinstall": "chmod +x node_modules/.bin/tsc",
     "build": "npx tsc",
     "test": "echo \"Error: no test specified\" && exit 1",
     "debug": "nodemon --exec \"node --inspect-brk=0.0.0.0:9339 --require ts-node/register src/app.ts\""
@@ -19,7 +20,7 @@
     "@types/multer": "^1.4.12",
     "@types/nodemailer": "^6.4.7",
     "nodemailer": "^6.9.1",
-    "nodemon": "^2.0.20",
+    "nodemon": "^2.0.22",
     "ts-node": "^10.9.2",
     "typescript": "^4.9.5"
   },
@@ -39,6 +40,7 @@
     "multer": "^1.4.5-lts.1",
     "path": "^0.12.7",
     "pg": "^8.9.0",
+    "run": "^1.5.0",
     "sequelize": "^6.28.0",
     "serverless-http": "^3.2.0",
     "socket.io": "^4.6.1",
