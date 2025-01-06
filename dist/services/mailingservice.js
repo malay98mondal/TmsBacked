@@ -51,5 +51,4 @@ worker.on('completed', (job) => {
 worker.on('failed', (job, err) => {
     console.log(`Job failed with error ${err.message}`);
 });
-
 exports.default = mailQueue;
