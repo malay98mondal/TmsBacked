@@ -4,23 +4,15 @@ import path from 'path';
 import routes from './routes';
 import bodyParser from 'body-parser';
 import dbInit from './db/init';
-const cors = require("cors"); 
+const cors: any = require("cors"); 
 import serverless from 'serverless-http'
 import queueMail from './middleware/queueMail';
 
 
 const app = express();
 const port = process.env.PORT || 5000;
-	// app.use(cors({
-	// 	origin:"*"	})); // enable cors
 	app.use(cors({
-  origin: "http://localhost:5173", // Allow only your frontend's origin
-  methods: ['GET', 'POST', 'OPTIONS'],
-  credentials: true,  // If you're using cookies or authorization headers
-}));
-
-
-
+		origin:"*"	})); // enable cors
 	// Body parsing Middleware
 	app.use(express.json()); // josn middle ware
 	app.use(bodyParser.json());
@@ -59,6 +51,7 @@ app.get("*", async (req: Request, res: Response) => {
 		path.join(__dirname, "..", uiCodePath, "index.html")
 	);
 });
+
 
 
 app.listen(5000, () => {
