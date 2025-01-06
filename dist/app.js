@@ -23,7 +23,9 @@ const serverless_http_1 = __importDefault(require("serverless-http"));
 const queueMail_1 = __importDefault(require("./middleware/queueMail"));
 const app = (0, express_1.default)();
 const port = process.env.PORT || 5000;
-app.use(cors()); // enable cors
+app.use(cors({
+    origin: "*"
+})); // enable cors
 // Body parsing Middleware
 app.use(express_1.default.json()); // josn middle ware
 app.use(body_parser_1.default.json());
