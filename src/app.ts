@@ -4,7 +4,7 @@ import path from 'path';
 import routes from './routes';
 import bodyParser from 'body-parser';
 import dbInit from './db/init';
-const cors: any = require("cors"); 
+const cors = require("cors"); 
 import serverless from 'serverless-http'
 import queueMail from './middleware/queueMail';
 
@@ -14,10 +14,11 @@ const port = process.env.PORT || 5000;
 	// app.use(cors({
 	// 	origin:"*"	})); // enable cors
 	app.use(cors({
-		origin: "http://localhost:5173", // Allow only your frontend's origin
-		methods: ['GET', 'POST'],
-		credentials: true,  // If you're using cookies or authorization headers
-	  }));	  
+  origin: "http://localhost:5173", // Allow only your frontend's origin
+  methods: ['GET', 'POST', 'OPTIONS'],
+  credentials: true,  // If you're using cookies or authorization headers
+}));
+
 
 
 	// Body parsing Middleware
