@@ -11,7 +11,8 @@ import queueMail from './middleware/queueMail';
 
 const app = express();
 const port = process.env.PORT || 5000;
-	app.use(cors()); // enable cors
+	app.use(cors({
+		origin:"*"	})); // enable cors
 	// Body parsing Middleware
 	app.use(express.json()); // josn middle ware
 	app.use(bodyParser.json());
