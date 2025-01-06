@@ -11,8 +11,15 @@ import queueMail from './middleware/queueMail';
 
 const app = express();
 const port = process.env.PORT || 5000;
+	// app.use(cors({
+	// 	origin:"*"	})); // enable cors
 	app.use(cors({
-		origin:"*"	})); // enable cors
+		origin: "http://localhost:5173", // Allow only your frontend's origin
+		methods: ['GET', 'POST'],
+		credentials: true,  // If you're using cookies or authorization headers
+	  }));	  
+
+
 	// Body parsing Middleware
 	app.use(express.json()); // josn middle ware
 	app.use(bodyParser.json());
