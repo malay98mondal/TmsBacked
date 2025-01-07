@@ -62,35 +62,59 @@ const path_1 = __importDefault(require("path"));
 const routes_1 = __importDefault(require("./routes"));
 const body_parser_1 = __importDefault(require("body-parser"));
 const init_1 = __importDefault(require("./db/init"));
-const serverless_http_1 = __importDefault(require("serverless-http"));
-const cors = require("cors");
+const cors_1 = __importDefault(require("cors"));
 const queueMail_1 = __importDefault(require("./middleware/queueMail"));
 const app = (0, express_1.default)();
-// Middleware
-app.use(cors({ origin: "*" })); // Enable CORS
-app.use(express_1.default.json()); // JSON middleware
+const port = process.env.PORT || 5000;
+// CORS Configuration for Production
+const allowedOrigins = [
+    "http://localhost:5173",
+    "https://tms-backed-prod.vercel.app" // Production Frontend URL
+];
+app.use((0, cors_1.default)({
+    origin: '*',
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    credentials: true,
+    allowedHeaders: ["Content-Type", "Authorization"]
+}));
+// Handle Preflight Requests (OPTIONS)
+app.options('*', (req, res) => {
+    res.header("Access-Control-Allow-Origin", req.headers.origin || "*");
+    res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE");
+    res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    res.sendStatus(200);
+});
+// Body Parsing Middleware
+app.use(express_1.default.json());
 app.use(body_parser_1.default.json());
 app.use(body_parser_1.default.urlencoded({ extended: true }));
-app.use(queueMail_1.default);
-// Database initialization
+app.use(queueMail_1.default); // QueueMail middleware
+// Database Initialization
 (0, init_1.default)();
-// Serve static files (frontend)
-let uiCodePath = "dist"; // Make sure this points to the folder where your `index.html` is located after build
+// Serve the UI files from production build (client-dist folder)
+const uiCodePath = "client-dist";
 app.use(express_1.default.static(path_1.default.join(__dirname, '..', uiCodePath)));
-// Serve the frontend for the root route
+// Serve the main index.html for the frontend
 app.get("/", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     return res.sendFile(path_1.default.join(__dirname, "..", uiCodePath, "index.html"));
 }));
-// API routes
+// Initialize API Routes
 app.use('/api/v1', routes_1.default);
+// Example Protected Route
 app.use('/api/v1/protected', (req, res) => {
     res.send({ message: 'This is a protected route' });
 });
-// Handle all other routes and serve the frontend
+// Catch-all for Other Routes
 app.get("*", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     return res.sendFile(path_1.default.join(__dirname, "..", uiCodePath, "index.html"));
 }));
-// Export the handler for serverless (Vercel)
-module.exports.handler = (0, serverless_http_1.default)(app);
-// Success message (will appear in logs)
-console.log("Backend successfully deployed and running!");
+// Start the Server in Development Mode
+if (process.env.NODE_ENV !== 'production') {
+    app.listen(port, () => {
+        console.log(`Server is running at http://localhost:${port}`);
+    });
+}
+// Serverless Deployment for Production (AWS Lambda, Vercel)
+//const handler = serverless(app);
+console.log("ts running successfully");
+//module.exports.handler = handler;
