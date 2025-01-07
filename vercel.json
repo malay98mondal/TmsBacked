@@ -8,12 +8,12 @@
     ],
     "routes": [
       {
-        "src": "/api/(.*)",
-        "dest": "/src/server.ts"
+        "src": "/",
+        "dest": "/"
       },
       {
-        "src": "/(.*)",
-        "dest": "/src/server.ts"
+        "src": "/dist",
+        "dest": "/"
       }
     ]
   }
