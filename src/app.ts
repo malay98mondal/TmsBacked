@@ -137,8 +137,8 @@ if (process.env.NODE_ENV !== 'production') {
 }
 
 // Serverless Deployment for Production (AWS Lambda, Vercel)
-const handler = serverless(app);
+//const handler = serverless(app);
 
 console.log("ts running successfully");
 
-module.exports.handler = handler;
+//module.exports.handler = handler;
