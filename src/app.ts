@@ -1,63 +1,136 @@
-import express, {Request,Response} from 'express';
-import "dotenv/config"
+// import express, {Request,Response} from 'express';
+// import "dotenv/config"
+// import path from 'path';
+// import routes from './routes';
+// import bodyParser from 'body-parser';
+// import dbInit from './db/init';
+// const cors: any = require("cors"); 
+// import serverless from 'serverless-http'
+// import queueMail from './middleware/queueMail';
+
+
+// const app = express();
+// const port = process.env.PORT || 5000;
+// 	app.use(cors({
+// 		origin:"*"	})); // enable cors
+// 	// Body parsing Middleware
+// 	app.use(express.json()); // josn middle ware
+// 	app.use(bodyParser.json());
+// 	app.use(bodyParser.urlencoded({ extended: true }));
+// 	//app.use(queueMail);
+// 	app.use(queueMail);
+
+
+
+
+// // // database initialization
+// dbInit();
+
+// //let uiCodePath = process.env.NODE_ENV == "development"? "client/dist" : "client-dist";
+// let uiCodePath = "client-dist"; //use this to debug production code 
+// app.use(express.static(path.join(__dirname, '..', uiCodePath)));
+
+// app.get("/", async (req: Request, res: Response) => {
+// 	return res.sendFile(
+// 		path.join(__dirname, "..", uiCodePath, "index.html")
+// 	);
+// });
+
+// //Intialising routes 
+// app.use('/api/v1', routes)
+
+
+// app.use('/api/v1/protected', (req: Request, res: Response) => {
+//     res.send({ message: 'This is a routes route' });
+// });
+
+
+
+// app.get("*", async (req: Request, res: Response) => {
+// 	return res.sendFile(
+// 		path.join(__dirname, "..", uiCodePath, "index.html")
+// 	);
+// });
+
+
+
+// app.listen(5000, () => {
+//   return console.log(`Express is listening at http://localhost:${port}`);
+// });
+
+// const handler = serverless(app)
+
+// module.exports.handler = handler;
+
+import express, { Request, Response } from 'express';
+import "dotenv/config";
 import path from 'path';
 import routes from './routes';
 import bodyParser from 'body-parser';
 import dbInit from './db/init';
-const cors: any = require("cors"); 
-import serverless from 'serverless-http'
+import cors from 'cors';
+import serverless from 'serverless-http';
 import queueMail from './middleware/queueMail';
-
 
 const app = express();
 const port = process.env.PORT || 5000;
-	app.use(cors({
-		origin:"*"	})); // enable cors
-	// Body parsing Middleware
-	app.use(express.json()); // josn middle ware
-	app.use(bodyParser.json());
-	app.use(bodyParser.urlencoded({ extended: true }));
-	//app.use(queueMail);
-	app.use(queueMail);
 
+// CORS Configuration for Production
+const allowedOrigins = [
+    "http://localhost:5173",  // Development Frontend URL
+    "https://tms-fronted-tan.vercel.app"  // Your Production Frontend URL
+];
 
+app.use(cors({
+    origin: (origin, callback) => {
+        if (origin && allowedOrigins.includes(origin)) {  // Check if origin is defined and matches allowedOrigins
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
+    methods: ["GET", "POST", "PUT", "DELETE"], // Allowed methods
+    credentials: true,  // If you're sending cookies or authorization headers
+}));
 
+// Body parsing Middleware
+app.use(express.json()); // JSON Middleware
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(queueMail);  // If queueMail is a middleware, include it
 
-// // database initialization
+// Database initialization
 dbInit();
 
-//let uiCodePath = process.env.NODE_ENV == "development"? "client/dist" : "client-dist";
-let uiCodePath = "client-dist"; //use this to debug production code 
+// Serve the UI files from the production build (client-dist folder)
+let uiCodePath = "client-dist";  // Ensure this is the correct path to your production frontend
 app.use(express.static(path.join(__dirname, '..', uiCodePath)));
 
+// Main route to serve the index.html
 app.get("/", async (req: Request, res: Response) => {
-	return res.sendFile(
-		path.join(__dirname, "..", uiCodePath, "index.html")
-	);
+    return res.sendFile(path.join(__dirname, "..", uiCodePath, "index.html"));
 });
 
-//Intialising routes 
-app.use('/api/v1', routes)
+// Initialize API routes
+app.use('/api/v1', routes);
 
-
+// Example of a protected route (update or remove if not necessary)
 app.use('/api/v1/protected', (req: Request, res: Response) => {
-    res.send({ message: 'This is a routes route' });
+    res.send({ message: 'This is a protected route' });
 });
 
-
-
+// Catch-all route for other URLs
 app.get("*", async (req: Request, res: Response) => {
-	return res.sendFile(
-		path.join(__dirname, "..", uiCodePath, "index.html")
-	);
+    return res.sendFile(path.join(__dirname, "..", uiCodePath, "index.html"));
 });
 
+// Local Development (for debugging)
+if (process.env.NODE_ENV !== 'production') {
+    app.listen(port, () => {
+        console.log(`Server is running at http://localhost:${port}`);
+    });
+}
 
-
-app.listen(5000, () => {
-  return console.log(`Express is listening at http://localhost:${port}`);
-});
-
-const handler = serverless(app)
-
+// For Serverless deployment (e.g., AWS Lambda or Vercel)
+const handler = serverless(app);
 module.exports.handler = handler;
