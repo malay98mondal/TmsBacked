@@ -74,9 +74,10 @@ app.use(body_parser_1.default.urlencoded({ extended: true }));
 app.use(queueMail_1.default);
 // Database initialization
 (0, init_1.default)();
-// Static files (frontend)
-let uiCodePath = "client-dist";
+// Serve static files (frontend)
+let uiCodePath = "dist"; // Make sure this points to the folder where your `index.html` is located after build
 app.use(express_1.default.static(path_1.default.join(__dirname, '..', uiCodePath)));
+// Serve the frontend for the root route
 app.get("/", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     return res.sendFile(path_1.default.join(__dirname, "..", uiCodePath, "index.html"));
 }));
@@ -85,8 +86,11 @@ app.use('/api/v1', routes_1.default);
 app.use('/api/v1/protected', (req, res) => {
     res.send({ message: 'This is a protected route' });
 });
+// Handle all other routes and serve the frontend
 app.get("*", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     return res.sendFile(path_1.default.join(__dirname, "..", uiCodePath, "index.html"));
 }));
-// Export the handler for serverless
+// Export the handler for serverless (Vercel)
 module.exports.handler = (0, serverless_http_1.default)(app);
+// Success message (will appear in logs)
+console.log("Backend successfully deployed and running!");
