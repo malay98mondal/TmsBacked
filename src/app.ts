@@ -62,7 +62,6 @@
 
 // module.exports.handler = handler;
 
-
 import express, { Request, Response } from 'express';
 import "dotenv/config";
 import path from 'path';
@@ -85,10 +84,11 @@ app.use(queueMail);
 // Database initialization
 dbInit();
 
-// Static files (frontend)
-let uiCodePath = "client-dist";
+// Serve static files (frontend)
+let uiCodePath = "dist"; // Make sure this points to the folder where your `index.html` is located after build
 app.use(express.static(path.join(__dirname, '..', uiCodePath)));
 
+// Serve the frontend for the root route
 app.get("/", async (req: Request, res: Response) => {
   return res.sendFile(
     path.join(__dirname, "..", uiCodePath, "index.html")
@@ -102,11 +102,15 @@ app.use('/api/v1/protected', (req: Request, res: Response) => {
   res.send({ message: 'This is a protected route' });
 });
 
+// Handle all other routes and serve the frontend
 app.get("*", async (req: Request, res: Response) => {
   return res.sendFile(
     path.join(__dirname, "..", uiCodePath, "index.html")
   );
 });
 
-// Export the handler for serverless
+// Export the handler for serverless (Vercel)
 module.exports.handler = serverless(app);
+
+// Success message (will appear in logs)
+console.log("Backend successfully deployed and running!");
