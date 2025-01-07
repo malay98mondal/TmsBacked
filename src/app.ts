@@ -78,7 +78,7 @@ const port = process.env.PORT || 5000;
 // CORS Configuration for Production
 const allowedOrigins = [
     "http://localhost:5173",  // Development Frontend URL
-    "https://tms-fronted-tan.vercel.app"  // Your Production Frontend URL
+    "https://tms-backed-prod.vercel.app/api/v1"  // Your Production Frontend URL
 ];
 
 app.use(cors({
