@@ -47,6 +47,12 @@ function getConnection() {
             host: 'aws-0-ap-south-1.pooler.supabase.com',
             port: 6543,
             dialect: 'postgres' as Dialect,
+            dialectOptions: {
+              ssl: {
+                require: true,
+                rejectUnauthorized: false,
+              },
+            },
         },
         development: {
             database: 'postgres',
@@ -55,6 +61,12 @@ function getConnection() {
             host: 'aws-0-ap-south-1.pooler.supabase.com',
             port: 6543,
             dialect: 'postgres' as Dialect,
+            dialectOptions: {
+              ssl: {
+                require: true,
+                rejectUnauthorized: false,
+              },
+            },
         },
     };
 
