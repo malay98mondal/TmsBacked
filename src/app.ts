@@ -62,6 +62,8 @@
 
 // module.exports.handler = handler;
 
+
+
 import express, { Request, Response } from 'express';
 import "dotenv/config";
 import path from 'path';
@@ -148,4 +150,3 @@ const handler = serverless(app);
 console.log("ts running successfully");
 
 module.exports.handler = handler;
-
