@@ -78,59 +78,70 @@ const port = process.env.PORT || 5000;
 // CORS Configuration for Production
 const allowedOrigins = [
     "http://localhost:5173",  // Development Frontend URL
-    "https://tms-backed-prod.vercel.app/api/v1"  // Your Production Frontend URL
+    "https://tms-backed-prod.vercel.app"  // Production Frontend URL
 ];
 
 app.use(cors({
     origin: (origin, callback) => {
-        if (origin && allowedOrigins.includes(origin)) {  // Check if origin is defined and matches allowedOrigins
+        // Allow requests with no origin (like mobile apps or curl)
+        if (!origin || allowedOrigins.includes(origin)) {
             callback(null, true);
         } else {
+            console.log(`Blocked by CORS: ${origin}`);
             callback(new Error('Not allowed by CORS'));
         }
     },
-    methods: ["GET", "POST", "PUT", "DELETE"], // Allowed methods
-    credentials: true,  // If you're sending cookies or authorization headers
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    credentials: true,
+    allowedHeaders: ["Content-Type", "Authorization"]
 }));
 
-// Body parsing Middleware
-app.use(express.json()); // JSON Middleware
+// Handle Preflight Requests (OPTIONS)
+app.options('*', (req: Request, res: Response) => {
+    res.header("Access-Control-Allow-Origin", req.headers.origin || "*");
+    res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE");
+    res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    res.sendStatus(200);
+});
+
+// Body Parsing Middleware
+app.use(express.json());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
-app.use(queueMail);  // If queueMail is a middleware, include it
+app.use(queueMail);  // QueueMail middleware
 
-// Database initialization
+// Database Initialization
 dbInit();
 
-// Serve the UI files from the production build (client-dist folder)
-let uiCodePath = "client-dist";  // Ensure this is the correct path to your production frontend
+// Serve the UI files from production build (client-dist folder)
+const uiCodePath = "client-dist";
 app.use(express.static(path.join(__dirname, '..', uiCodePath)));
 
-// Main route to serve the index.html
+// Serve the main index.html for the frontend
 app.get("/", async (req: Request, res: Response) => {
     return res.sendFile(path.join(__dirname, "..", uiCodePath, "index.html"));
 });
 
-// Initialize API routes
+// Initialize API Routes
 app.use('/api/v1', routes);
 
-// Example of a protected route (update or remove if not necessary)
+// Example Protected Route
 app.use('/api/v1/protected', (req: Request, res: Response) => {
     res.send({ message: 'This is a protected route' });
 });
 
-// Catch-all route for other URLs
+// Catch-all for Other Routes
 app.get("*", async (req: Request, res: Response) => {
     return res.sendFile(path.join(__dirname, "..", uiCodePath, "index.html"));
 });
 
-// Local Development (for debugging)
+// Start the Server in Development Mode
 if (process.env.NODE_ENV !== 'production') {
     app.listen(port, () => {
         console.log(`Server is running at http://localhost:${port}`);
     });
 }
 
-// For Serverless deployment (e.g., AWS Lambda or Vercel)
+// Serverless Deployment for Production (AWS Lambda, Vercel)
 const handler = serverless(app);
 module.exports.handler = handler;
