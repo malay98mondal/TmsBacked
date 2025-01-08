@@ -86,7 +86,7 @@ function getConnection() {
         return new sequelize_1.Sequelize(dbName, dbUser, dbPassword, {
             host: dbHost,
             port: parseInt(dbPort || '6543'),
-            dialect: dbDriver,
+            dialect: process.env.DB_DRIVER,
         });
     }
     else {

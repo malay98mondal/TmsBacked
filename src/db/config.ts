@@ -102,7 +102,7 @@ function getConnection() {
     return new Sequelize(dbName, dbUser, dbPassword, {
       host: dbHost,
       port: parseInt(dbPort || '6543'),
-      dialect: dbDriver,
+      dialect: process.env.DB_DRIVER as Dialect,
     });
   } else {
     console.log("Connecting to development DB...");
