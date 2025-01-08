@@ -48,7 +48,7 @@
     "xlsx": "^0.18.5"
   },
   "engines": {
-    "node": "22.x"
+    "node": "20.14.0"
   },
   "description": ""
 }
