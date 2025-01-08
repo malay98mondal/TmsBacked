@@ -49,9 +49,5 @@
   "engines": {
     "node": ">=16.0.0"
   },
-  "bundleDependencies": [
-    "pg",
-    "sequelize"
-  ],
   "description": ""
 }
