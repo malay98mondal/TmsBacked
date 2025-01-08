@@ -1,93 +1,48 @@
-// import { Dialect, Sequelize } from 'sequelize';
-
-// // Define the type for the environment variable
-// type Environment = 'development' | 'production';
-
-// const environment: Environment = (process.env.NODE_ENV as Environment) || 'production';
-
-// function getConnection() {
-//   if (environment === 'production') {
-//     // Production configuration
-//     return new Sequelize('postgres', 'postgres.kdkmgxbwpwlifkhiaeld', 'Ems_Task_Manegment_Production@123', {
-//       host: 'aws-0-ap-south-1.pooler.supabase.com',
-//       port: 6543,
-//       dialect: 'postgres',
-//     });
-//   } else {
-//     // Development configuration
-//     return new Sequelize('postgres', 'postgres.bjqutidfqwpzeajjfpgk', 'EmstaskManegment@123', {
-//       host: 'aws-0-ap-south-1.pooler.supabase.com',
-//       port: 6543,
-//       dialect: 'postgres',
-//     });
-//   }
-// }
-
-// console.log('Connecting to the database...');
-
-// // Create the Sequelize connection
-// const sequelizeConnection = getConnection();
-
-// export default sequelizeConnection;
-
-
 import { Dialect, Sequelize } from 'sequelize';
+import dotenv from 'dotenv'
+dotenv.config()
 
 // Define the type for the environment variable
 type Environment = 'development' | 'production';
 
 const environment: Environment = (process.env.NODE_ENV as Environment) || 'production';
+const dbHost = process.env.RDS_HOSTNAME;
+const dbPort = process.env.RDS_PORT;
+const dbName = process.env.RDS_DB_NAME as string;
+const dbUser = process.env.RDS_USERNAME as string;
+const dbDriver = process.env.DB_DRIVER as Dialect;
+const dbPassword = process.env.RDS_PASSWORD as string;
+
+//dev
+const ddbHost = process.env.DRDS_HOSTNAME;
+const ddbPort = process.env.DRDS_PORT;
+const ddbName = process.env.DRDS_DB_NAME as string;
+const ddbUser = process.env.DRDS_USERNAME as string;
+const ddbDriver = process.env.DDB_DRIVER as Dialect;
+const ddbPassword = process.env.DRDS_PASSWORD as string;
 
 function getConnection() {
-    const config = {
-        production: {
-            database: 'postgres',
-            username: 'postgres.kdkmgxbwpwlifkhiaeld',
-            password: 'Ems_Task_Manegment_Production@123',
-            host: 'aws-0-ap-south-1.pooler.supabase.com',
-            port: 6543,
-            dialect: 'postgres' as Dialect,
-            dialectOptions: {
-              ssl: {
-                require: true,
-                rejectUnauthorized: false,
-              },
-            },
-        },
-        development: {
-            database: 'postgres',
-            username: 'postgres.bjqutidfqwpzeajjfpgk',
-            password: 'EmstaskManegment@123',
-            host: 'aws-0-ap-south-1.pooler.supabase.com',
-            port: 6543,
-            dialect: 'postgres' as Dialect,
-            dialectOptions: {
-              ssl: {
-                require: true,
-                rejectUnauthorized: false,
-              },
-            },
-        },
-    };
-
-    const envConfig = config[environment];
-    return new Sequelize(envConfig.database, envConfig.username, envConfig.password, {
-        host: envConfig.host,
-        port: envConfig.port,
-        dialect: envConfig.dialect,
-        logging: console.log,
+  if (environment === 'production') {
+    // Production configuration
+    return new Sequelize(dbName, dbUser, dbPassword, {
+      host: dbHost,
+      port: parseInt(dbPort || '6543' ),
+      dialect: 'postgres',
     });
+  } else {
+    // Development configuration
+    return new Sequelize('ddbName', 'ddbUser', 'ddbPassword', {
+      host: ddbHost,
+      port: parseInt(ddbPort || '6543' ),
+      dialect: 'postgres',
+    });
+  }
 }
 
 console.log('Connecting to the database...');
+
+// Create the Sequelize connection
 const sequelizeConnection = getConnection();
 
-sequelizeConnection.authenticate()
-    .then(() => {
-        console.log('Connection has been established successfully.');
-    })
-    .catch(err => {
-        console.error('Unable to connect to the database:', err);
-    });
-
 export default sequelizeConnection;
+
