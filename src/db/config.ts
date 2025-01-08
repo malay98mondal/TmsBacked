@@ -110,14 +110,14 @@ function getConnection() {
     return new Sequelize(dbName, dbUser, dbPassword, {
       host: dbHost,
       port: parseInt(dbPort || '6543'),
-      dialect: dbDriver as Dialect,
+      dialect: 'postgres', // Explicitly specify dialect
     });
   } else {
     console.log("Connecting to development DB...");
     return new Sequelize(ddbName, ddbUser, ddbPassword as string, {
       host: ddbHost,
       port: parseInt(ddbPort || '6543'),
-      dialect: ddbDriver as Dialect,
+      dialect: 'postgres', // Explicitly specify dialect
     });
   }
 }
