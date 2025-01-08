@@ -277,5 +277,4 @@ app.listen(port, () => {
 });
 // Serverless Deployment for Production (AWS Lambda, Vercel)
 const handler = (0, serverless_http_1.default)(app);
-// Log successful server start
-module.exports.handler = handler;
+module.exports = { handler };
