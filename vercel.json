@@ -5,20 +5,12 @@
     {
       "src": "dist/app.js",
       "use": "@vercel/node"
-    },
-    {
-      "src": "client-dist/**/*",
-      "use": "@vercel/static"
     }
   ],
   "routes": [
     {
       "src": "/api/(.*)",
       "dest": "/dist/app.ts" 
-    },
-    {
-      "src": "/api/(.*)",
-      "dest": "/client-dist/$1"
     }
   ]
 }
