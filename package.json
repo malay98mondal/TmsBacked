@@ -45,9 +45,9 @@
     "socket.io": "^4.6.1",
     "xlsx": "^0.18.5"
   },
-  "engines": {
-    "node": ">=16.x"
-  },
+ "engines": {
+  "node": ">=16.0.0"
+},
   "bundleDependencies": [
     "pg",
     "sequelize"
