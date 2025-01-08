@@ -31,7 +31,7 @@ function getConnection() {
     });
   } else {
     // Development configuration
-    return new Sequelize('ddbName', 'ddbUser', 'ddbPassword', {
+    return new Sequelize(ddbName, ddbUser, ddbPassword, {
       host: ddbHost,
       port: parseInt(ddbPort || '6543' ),
       dialect: 'postgres',

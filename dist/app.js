@@ -63,6 +63,7 @@ const routes_1 = __importDefault(require("./routes"));
 const body_parser_1 = __importDefault(require("body-parser"));
 const init_1 = __importDefault(require("./db/init"));
 const cors_1 = __importDefault(require("cors"));
+const serverless_http_1 = __importDefault(require("serverless-http"));
 const queueMail_1 = __importDefault(require("./middleware/queueMail"));
 const app = (0, express_1.default)();
 const port = process.env.PORT || 5000;
@@ -115,6 +116,6 @@ if (process.env.NODE_ENV !== 'production') {
     });
 }
 // Serverless Deployment for Production (AWS Lambda, Vercel)
-//const handler = serverless(app);
+const handler = (0, serverless_http_1.default)(app);
 console.log("ts running successfully");
-//module.exports.handler = handler;
+module.exports.handler = handler;
