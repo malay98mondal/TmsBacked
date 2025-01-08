@@ -6,6 +6,7 @@
     "dev": "nodemon --exec \"ts-node src/app.ts\"",
     "start": "node dist/app.js",
     "build": "npx tsc",
+    "postinstall": "npm install",
     "test": "echo \"Error: no test specified\" && exit 1",
     "debug": "nodemon --exec \"node --inspect-brk=0.0.0.0:9339 --require ts-node/register src/app.ts\""
   },
