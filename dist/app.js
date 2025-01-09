@@ -230,13 +230,6 @@ app.use((0, cors_1.default)({
     credentials: true,
     allowedHeaders: ["Content-Type", "Authorization"]
 }));
-// Handle Preflight Requests (OPTIONS)
-app.options('*', (req, res) => {
-    res.header("Access-Control-Allow-Origin", req.headers.origin || "*");
-    res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE");
-    res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
-    res.sendStatus(200);
-});
 // Body Parsing Middleware
 app.use(express_1.default.json());
 app.use(body_parser_1.default.json());
@@ -253,10 +246,10 @@ app.get("/", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
 }));
 // Initialize API Routes
 app.use('/api/v1', routes_1.default);
-// Example Protected Route
-app.use('/api/v1/protected', (req, res) => {
-    res.send({ message: 'This is a protected route' });
-});
+// // Example Protected Route
+// app.use('/api/v1/protected', (req: Request, res: Response) => {
+//     res.send({ message: 'This is a protected route' });
+// });
 // Health Check Route
 app.get('/health', (req, res) => {
     res.send({ message: 'Backend is running perfectly!' });
@@ -275,6 +268,8 @@ app.listen(port, () => {
     // This will log after the server starts
     console.log("TS running successfully");
 });
-// Serverless Deployment for Production (AWS Lambda, Vercel)
-const handler = (0, serverless_http_1.default)(app);
-module.exports = { handler };
+// // Serverless Deployment for Production (AWS Lambda, Vercel)
+// const handler = serverless(app);
+// module.exports = { handler };
+// Serverless Export for Vercel
+module.exports = (0, serverless_http_1.default)(app); // Export for serverless environments
